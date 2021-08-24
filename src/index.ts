@@ -23,7 +23,7 @@ interface IWitnessData {
     root: BigInt,
 }
 
-const _hash5 = (inputs) => {
+const _hash5 = (inputs: Array<BigInt>) => {
     return circomlib.poseidon(inputs)
 }
 
@@ -85,10 +85,10 @@ const packToSolidityProof = (fullProof: IProof) => {
     return {
         a: proof.pi_a.slice(0, 2),
         b: proof.pi_b
-            .map(x => x.reverse())
+            .map((x:any) => x.reverse())
             .slice(0, 2),
         c: proof.pi_c.slice(0, 2),
-        inputs: publicSignals.map(x => {
+        inputs: publicSignals.map((x:any) => {
             x = BigInt(x);
             return x.mod(SNARK_FIELD_SIZE).toString()
         })
