@@ -1,5 +1,6 @@
 import { signMsg, genExternalNullifier, genIdentity, genIdentityCommitment, verifySignature, serialiseIdentity, unSerialiseIdentity, Identity } from 'libsemaphore';
-import * as circomlib from 'circomlib';
+// import * as circomlib from 'circomlib';
+const circomlib = require('circomlib');
 import * as ethers from 'ethers';
 const { groth16 } = require('snarkjs');
 const Tree = require('incrementalquintree/build/IncrementalQuinTree');
