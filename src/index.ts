@@ -170,6 +170,7 @@ export {
     genNullifierHash,
     genMsg,
     genProof,
+    genProof_fastSemaphore,
     packToSolidityProof,
     verifyProof,
     createTree,

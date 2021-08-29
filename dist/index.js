@@ -36,7 +36,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 exports.__esModule = true;
-exports.unSerialiseIdentity = exports.serialiseIdentity = exports.createTree = exports.verifyProof = exports.packToSolidityProof = exports.genProof = exports.genMsg = exports.genNullifierHash = exports.genSignalHash = exports.verifySignature = exports.genNullifierHash_poseidon = exports.genIdentityCommitment_poseidon = exports.genIdentityCommitment = exports.genIdentity = exports.genExternalNullifier = exports.signMsg = void 0;
+exports.unSerialiseIdentity = exports.serialiseIdentity = exports.createTree = exports.verifyProof = exports.packToSolidityProof = exports.genProof_fastSemaphore = exports.genProof = exports.genMsg = exports.genNullifierHash = exports.genSignalHash = exports.verifySignature = exports.genNullifierHash_poseidon = exports.genIdentityCommitment_poseidon = exports.genIdentityCommitment = exports.genIdentity = exports.genExternalNullifier = exports.signMsg = void 0;
 var libsemaphore_1 = require("libsemaphore");
 exports.signMsg = libsemaphore_1.signMsg;
 exports.genExternalNullifier = libsemaphore_1.genExternalNullifier;
@@ -102,6 +102,7 @@ var genProof_fastSemaphore = function (identity, signalHash, identityCommitments
         }
     });
 }); };
+exports.genProof_fastSemaphore = genProof_fastSemaphore;
 var genProof = function (identity, signature, signalHash, identityCommitments, externalNullifier, depth, zeroValue, leavesPerNode, wasmFilePath, finalZkeyPath) { return __awaiter(void 0, void 0, void 0, function () {
     var tree, identityCommitment, leafIndex, _i, identityCommitments_2, identityCommitment_2, proof, grothInput, fullProof, root;
     return __generator(this, function (_a) {
