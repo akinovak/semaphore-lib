@@ -36,7 +36,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 exports.__esModule = true;
-exports.unSerialiseIdentity = exports.serialiseIdentity = exports.createTree = exports.verifyProof = exports.packToSolidityProof = exports.genProof = exports.genMsg = exports.genNullifierHash = exports.genSignalHash = exports.verifySignature = exports.genIdentityCommitment = exports.genIdentity = exports.genExternalNullifier = exports.signMsg = void 0;
+exports.unSerialiseIdentity = exports.serialiseIdentity = exports.createTree = exports.verifyProof = exports.packToSolidityProof = exports.genProof = exports.genMsg = exports.genNullifierHash = exports.genSignalHash = exports.verifySignature = exports.genNullifierHash_poseidon = exports.genIdentityCommitment_poseidon = exports.genIdentityCommitment = exports.genIdentity = exports.genExternalNullifier = exports.signMsg = void 0;
 var libsemaphore_1 = require("libsemaphore");
 exports.signMsg = libsemaphore_1.signMsg;
 exports.genExternalNullifier = libsemaphore_1.genExternalNullifier;
@@ -130,4 +130,20 @@ var createTree = function (depth, zeroValue, leavesPerNode) {
     return new Tree.IncrementalQuinTree(depth, zeroValue, leavesPerNode, _hash5);
 };
 exports.createTree = createTree;
+var genIdentityCommitment_poseidon = function (identity) {
+    return circomlib.poseidon([
+        circomlib.babyJub.mulPointEscalar(identity.keypair.pubKey, 8)[0],
+        identity.identityNullifier,
+        identity.identityTrapdoor
+    ]);
+};
+exports.genIdentityCommitment_poseidon = genIdentityCommitment_poseidon;
+var genNullifierHash_poseidon = function (externalNullifier, identityNullifier, nLevels) {
+    return circomlib.poseidon([
+        externalNullifier,
+        identityNullifier,
+        nLevels
+    ]);
+};
+exports.genNullifierHash_poseidon = genNullifierHash_poseidon;
 //# sourceMappingURL=index.js.map

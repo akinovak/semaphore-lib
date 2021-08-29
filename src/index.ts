@@ -104,6 +104,22 @@ const createTree = (depth: number, zeroValue: number | BigInt, leavesPerNode: nu
     return new Tree.IncrementalQuinTree(depth, zeroValue, leavesPerNode, _hash5);
 }
 
+const genIdentityCommitment_poseidon = (identity: Identity): any => {
+    return circomlib.poseidon([
+        circomlib.babyJub.mulPointEscalar(identity.keypair.pubKey, 8)[0],
+        identity.identityNullifier,
+        identity.identityTrapdoor
+    ]);
+}
+
+const genNullifierHash_poseidon = (externalNullifier: string, identityNullifier: bigint, nLevels: number): any => {
+    return circomlib.poseidon([
+        externalNullifier, 
+        identityNullifier,
+        nLevels
+    ]);
+}
+
 
 export {
     Identity,
@@ -115,6 +131,8 @@ export {
     genExternalNullifier,
     genIdentity,
     genIdentityCommitment,
+    genIdentityCommitment_poseidon,
+    genNullifierHash_poseidon,
     verifySignature,
     genSignalHash,
     genNullifierHash,
