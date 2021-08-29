@@ -69,17 +69,50 @@ var genNullifierHash = function (externalNullifier, identity, nLevels) {
     return circomlib.poseidon([BigInt(externalNullifier), BigInt(identity.identityNullifier), BigInt(nLevels)]);
 };
 exports.genNullifierHash = genNullifierHash;
-var genProof = function (identity, signature, signalHash, identityCommitments, externalNullifier, depth, zeroValue, leavesPerNode, wasmFilePath, finalZkeyPath) { return __awaiter(void 0, void 0, void 0, function () {
+var genProof_fastSemaphore = function (identity, signalHash, identityCommitments, externalNullifier, depth, zeroValue, leavesPerNode, wasmFilePath, finalZkeyPath) { return __awaiter(void 0, void 0, void 0, function () {
     var tree, identityCommitment, leafIndex, _i, identityCommitments_1, identityCommitment_1, proof, grothInput, fullProof, root;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                tree = new Tree.IncrementalQuinTree(depth, zeroValue, leavesPerNode, _hash5);
+                identityCommitment = genIdentityCommitment_poseidon(identity);
+                leafIndex = identityCommitments.indexOf(identityCommitment);
+                for (_i = 0, identityCommitments_1 = identityCommitments; _i < identityCommitments_1.length; _i++) {
+                    identityCommitment_1 = identityCommitments_1[_i];
+                    tree.insert(identityCommitment_1);
+                }
+                proof = tree.genMerklePath(leafIndex);
+                grothInput = {
+                    identity_pk: identity.keypair.pubKey,
+                    identity_nullifier: identity.identityNullifier,
+                    identity_trapdoor: identity.identityTrapdoor,
+                    identity_path_index: proof.indices,
+                    path_elements: proof.pathElements,
+                    external_nullifier: externalNullifier,
+                    signal_hash: signalHash
+                };
+                return [4 /*yield*/, groth16.fullProve(grothInput, wasmFilePath, finalZkeyPath)];
+            case 1:
+                fullProof = _a.sent();
+                root = tree.root;
+                return [2 /*return*/, {
+                        fullProof: fullProof,
+                        root: root
+                    }];
+        }
+    });
+}); };
+var genProof = function (identity, signature, signalHash, identityCommitments, externalNullifier, depth, zeroValue, leavesPerNode, wasmFilePath, finalZkeyPath) { return __awaiter(void 0, void 0, void 0, function () {
+    var tree, identityCommitment, leafIndex, _i, identityCommitments_2, identityCommitment_2, proof, grothInput, fullProof, root;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
                 tree = new Tree.IncrementalQuinTree(depth, zeroValue, leavesPerNode, _hash5);
                 identityCommitment = libsemaphore_1.genIdentityCommitment(identity);
                 leafIndex = identityCommitments.indexOf(identityCommitment);
-                for (_i = 0, identityCommitments_1 = identityCommitments; _i < identityCommitments_1.length; _i++) {
-                    identityCommitment_1 = identityCommitments_1[_i];
-                    tree.insert(identityCommitment_1);
+                for (_i = 0, identityCommitments_2 = identityCommitments; _i < identityCommitments_2.length; _i++) {
+                    identityCommitment_2 = identityCommitments_2[_i];
+                    tree.insert(identityCommitment_2);
                 }
                 proof = tree.genMerklePath(leafIndex);
                 grothInput = {

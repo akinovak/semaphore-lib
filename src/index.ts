@@ -43,6 +43,38 @@ const genNullifierHash = (externalNullifier: string, identity: Identity, nLevels
     return circomlib.poseidon([BigInt(externalNullifier), BigInt(identity.identityNullifier), BigInt(nLevels)]);
 }
 
+const genProof_fastSemaphore = async (identity: Identity, signalHash: BigInt, 
+    identityCommitments: Array<BigInt>, externalNullifier: string, depth: number, zeroValue: BigInt, 
+    leavesPerNode: number, wasmFilePath: string, finalZkeyPath: string): Promise<IWitnessData> => {
+
+    const tree: IncrementalQuinTree = new Tree.IncrementalQuinTree(depth, zeroValue, leavesPerNode, _hash5);
+    const identityCommitment: BigInt = genIdentityCommitment_poseidon(identity);
+    const leafIndex = identityCommitments.indexOf(identityCommitment);
+
+    for(const identityCommitment of identityCommitments) {
+        tree.insert(identityCommitment);
+    }
+
+    const proof = tree.genMerklePath(leafIndex);
+
+    const grothInput: any = {
+        identity_pk: identity.keypair.pubKey, 
+        identity_nullifier: identity.identityNullifier,
+        identity_trapdoor: identity.identityTrapdoor,
+        identity_path_index: proof.indices,
+        path_elements: proof.pathElements,
+        external_nullifier: externalNullifier,
+        signal_hash: signalHash,
+    }
+
+    const fullProof: IProof = await groth16.fullProve(grothInput, wasmFilePath, finalZkeyPath);
+    const root: BigInt = tree.root;
+    return {
+        fullProof, 
+        root
+    }
+}
+
 const genProof = async (identity: Identity, signature: EdDSASignature, signalHash: BigInt, 
     identityCommitments: Array<BigInt>, externalNullifier: string, depth: number, zeroValue: BigInt, 
     leavesPerNode: number, wasmFilePath: string, finalZkeyPath: string): Promise<IWitnessData> => {
