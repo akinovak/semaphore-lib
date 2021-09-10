@@ -36,7 +36,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 exports.__esModule = true;
-exports.unSerialiseIdentity = exports.serialiseIdentity = exports.createTree = exports.verifyProof = exports.packToSolidityProof = exports.genProof_fastSemaphore = exports.genProof = exports.genMsg = exports.genNullifierHash = exports.genSignalHash = exports.verifySignature = exports.genNullifierHash_poseidon = exports.genIdentityCommitment_poseidon = exports.genIdentityCommitment = exports.genIdentity = exports.genExternalNullifier = exports.signMsg = void 0;
+exports.unSerialiseIdentity = exports.serialiseIdentity = exports.createTree = exports.verifyProof = exports.packToSolidityProof = exports.genProof_fastSemaphore = exports.genProof = exports.genMsg = exports.genNullifierHash = exports.genSignalHash = exports.verifySignature = exports.genNullifierHash_poseidon = exports.genIdentityCommitment_fastSemaphore = exports.genIdentityCommitment_poseidon = exports.genIdentityCommitment = exports.genIdentity = exports.genExternalNullifier = exports.signMsg = void 0;
 var libsemaphore_1 = require("libsemaphore");
 exports.signMsg = libsemaphore_1.signMsg;
 exports.genExternalNullifier = libsemaphore_1.genExternalNullifier;
@@ -109,7 +109,7 @@ var genProof = function (identity, signature, signalHash, identityCommitments, e
         switch (_a.label) {
             case 0:
                 tree = new Tree.IncrementalQuinTree(depth, zeroValue, leavesPerNode, _hash5);
-                identityCommitment = libsemaphore_1.genIdentityCommitment(identity);
+                identityCommitment = (0, libsemaphore_1.genIdentityCommitment)(identity);
                 leafIndex = identityCommitments.indexOf(identityCommitment);
                 for (_i = 0, identityCommitments_2 = identityCommitments; _i < identityCommitments_2.length; _i++) {
                     identityCommitment_2 = identityCommitments_2[_i];
@@ -172,6 +172,13 @@ var genIdentityCommitment_poseidon = function (identity) {
     ]);
 };
 exports.genIdentityCommitment_poseidon = genIdentityCommitment_poseidon;
+var genIdentityCommitment_fastSemaphore = function (identity) {
+    return circomlib.poseidon([
+        identity.identityNullifier,
+        identity.identityTrapdoor
+    ]);
+};
+exports.genIdentityCommitment_fastSemaphore = genIdentityCommitment_fastSemaphore;
 var genNullifierHash_poseidon = function (externalNullifier, identityNullifier, nLevels) {
     return circomlib.poseidon([
         externalNullifier,
