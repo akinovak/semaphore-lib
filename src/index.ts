@@ -144,6 +144,13 @@ const genIdentityCommitment_poseidon = (identity: Identity): any => {
     ]);
 }
 
+const genIdentityCommitment_fastSemaphore = (identity: Identity): any => {
+    return circomlib.poseidon([
+        identity.identityNullifier,
+        identity.identityTrapdoor
+    ]);
+}
+
 const genNullifierHash_poseidon = (externalNullifier: string, identityNullifier: bigint, nLevels: number): any => {
     return circomlib.poseidon([
         externalNullifier, 
@@ -164,6 +171,7 @@ export {
     genIdentity,
     genIdentityCommitment,
     genIdentityCommitment_poseidon,
+    genIdentityCommitment_fastSemaphore,
     genNullifierHash_poseidon,
     verifySignature,
     genSignalHash,
