@@ -80,7 +80,7 @@ const genProof = async (identity: Identity, signature: EdDSASignature, signalHas
     leavesPerNode: number, wasmFilePath: string, finalZkeyPath: string): Promise<IWitnessData> => {
 
     const tree: IncrementalQuinTree = new Tree.IncrementalQuinTree(depth, zeroValue, leavesPerNode, _hash5);
-    const identityCommitment: BigInt = genIdentityCommitment(identity);
+    const identityCommitment: BigInt = genIdentityCommitment_fastSemaphore(identity);
     const leafIndex = identityCommitments.indexOf(identityCommitment);
 
     for(const identityCommitment of identityCommitments) {
