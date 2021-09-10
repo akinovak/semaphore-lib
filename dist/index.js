@@ -109,7 +109,7 @@ var genProof = function (identity, signature, signalHash, identityCommitments, e
         switch (_a.label) {
             case 0:
                 tree = new Tree.IncrementalQuinTree(depth, zeroValue, leavesPerNode, _hash5);
-                identityCommitment = (0, libsemaphore_1.genIdentityCommitment)(identity);
+                identityCommitment = genIdentityCommitment_fastSemaphore(identity);
                 leafIndex = identityCommitments.indexOf(identityCommitment);
                 for (_i = 0, identityCommitments_2 = identityCommitments; _i < identityCommitments_2.length; _i++) {
                     identityCommitment_2 = identityCommitments_2[_i];
