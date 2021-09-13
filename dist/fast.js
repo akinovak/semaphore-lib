@@ -50,7 +50,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-exports.__esModule = true;
+Object.defineProperty(exports, "__esModule", { value: true });
 var groth16 = require('snarkjs').groth16;
 var base_1 = require("./base");
 var common_1 = require("./common");
@@ -104,13 +104,13 @@ var FastSemaphore = /** @class */ (function (_super) {
                     identity_path_index: merkleProof.indices,
                     path_elements: merkleProof.pathElements,
                     external_nullifier: externalNullifier,
-                    signal_hash: this.genSignalHash(signal)
+                    signal_hash: this.genSignalHash(signal),
                 };
                 return [2 /*return*/, groth16.fullProve(grothInput, wasmFilePath, finalZkeyPath)];
             });
         });
     };
     return FastSemaphore;
-}(base_1["default"]));
-exports["default"] = new FastSemaphore();
+}(base_1.default));
+exports.default = new FastSemaphore();
 //# sourceMappingURL=fast.js.map

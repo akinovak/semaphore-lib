@@ -1,5 +1,5 @@
 "use strict";
-exports.__esModule = true;
+Object.defineProperty(exports, "__esModule", { value: true });
 var ethers = require("ethers");
 var circomlib = require('circomlib');
 var bigintConversion = require("bigint-conversion");
@@ -22,7 +22,7 @@ var BaseSemaphore = /** @class */ (function () {
         return {
             keypair: (0, common_1.genEddsaKeyPair)(privKey),
             identityNullifier: bigintConversion.bufToBigint((0, common_1.genRandomBuffer)(31)),
-            identityTrapdoor: bigintConversion.bufToBigint((0, common_1.genRandomBuffer)(31))
+            identityTrapdoor: bigintConversion.bufToBigint((0, common_1.genRandomBuffer)(31)),
         };
     };
     BaseSemaphore.prototype.serializeIdentity = function (identity) {
@@ -38,7 +38,7 @@ var BaseSemaphore = /** @class */ (function () {
         return {
             keypair: (0, common_1.genEddsaKeyPair)(Buffer.from(data[0], 'hex')),
             identityNullifier: bigintConversion.hexToBigint(data[1]),
-            identityTrapdoor: bigintConversion.hexToBigint(data[2])
+            identityTrapdoor: bigintConversion.hexToBigint(data[2]),
         };
     };
     BaseSemaphore.prototype.genNullifierHash = function (externalNullifier, identityNullifier, nLevels) {
@@ -73,7 +73,7 @@ var BaseSemaphore = /** @class */ (function () {
             c: proof.pi_c.slice(0, 2),
             inputs: publicSignals.map(function (x) {
                 x = BigInt(x);
-                return x.mod(SNARK_FIELD_SIZE).toString();
+                return (x % SNARK_FIELD_SIZE).toString();
             })
         };
     };
@@ -92,5 +92,5 @@ var BaseSemaphore = /** @class */ (function () {
     };
     return BaseSemaphore;
 }());
-exports["default"] = BaseSemaphore;
+exports.default = BaseSemaphore;
 //# sourceMappingURL=base.js.map

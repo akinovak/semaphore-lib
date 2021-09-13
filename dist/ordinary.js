@@ -50,7 +50,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-exports.__esModule = true;
+Object.defineProperty(exports, "__esModule", { value: true });
 var groth16 = require('snarkjs').groth16;
 var circomlib = require('circomlib');
 var base_1 = require("./base");
@@ -112,13 +112,13 @@ var OrdinarySemaphore = /** @class */ (function (_super) {
                     path_elements: merkleProof.pathElements,
                     auth_sig_r: signature.R8,
                     signal_hash: signalHash,
-                    external_nullifier: externalNullifier
+                    external_nullifier: externalNullifier,
                 };
                 return [2 /*return*/, groth16.fullProve(grothInput, wasmFilePath, finalZkeyPath)];
             });
         });
     };
     return OrdinarySemaphore;
-}(base_1["default"]));
-exports["default"] = new OrdinarySemaphore();
+}(base_1.default));
+exports.default = new OrdinarySemaphore();
 //# sourceMappingURL=ordinary.js.map
