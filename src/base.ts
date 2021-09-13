@@ -1,14 +1,24 @@
 import * as ethers from 'ethers';
 const circomlib = require('circomlib');
 import * as bigintConversion from 'bigint-conversion';
-import { genEddsaKeyPair, genRandomBuffer, poseidonHash } from "./common";
-import { EddsaPrivateKey, EddsaPublicKey, EdDSASignature, Identity, IncrementalQuinTree, IProof } from './types';
+import { genEddsaKeyPair, genRandomBuffer, identityCommitmentHasher, poseidonHash } from "./common";
+import { EddsaPrivateKey, EddsaPublicKey, EdDSASignature, Hasher, Identity, IncrementalQuinTree, IProof } from './types';
 const { groth16 } = require('snarkjs');
 const Tree = require('incrementalquintree/build/IncrementalQuinTree');
 
 const SNARK_FIELD_SIZE: BigInt = BigInt("21888242871839275222246405745257275088548364400416034343698204186575808495617");
 
 class BaseSemaphore {
+
+    protected commitmentHasher: Hasher | null = null;
+
+    setHasher(hashFunction: string) {
+        const hash = identityCommitmentHasher[hashFunction];
+        if (!hash) throw new Error(`${hashFunction} identityCommitment hasher not provided`);
+
+        this.commitmentHasher = hash;
+    }
+
     genIdentity(privKey: Buffer = genRandomBuffer(32),): Identity {
         return {
             keypair: genEddsaKeyPair(privKey),

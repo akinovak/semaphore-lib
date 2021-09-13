@@ -1,8 +1,5 @@
 import * as crypto from 'crypto';
 import * as circomlib from 'circomlib';
-import * as ethers from 'ethers';
-const { groth16 } = require('snarkjs');
-import * as bigintConversion from 'bigint-conversion';
 import { EddsaKeyPair, EddsaPrivateKey, EddsaPublicKey, Hasher } from './types';
 const utils = require("ffjavascript").utils;
 

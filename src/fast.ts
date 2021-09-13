@@ -1,23 +1,19 @@
 const { groth16 } = require('snarkjs');
 import BaseSemaphore from './base';
-import { identityCommitmentHasher, poseidonHash } from './common';
+import { poseidonHash } from './common';
 import { Identity, IncrementalQuinTree, IProof, IWitnessData } from './types';
 const Tree = require('incrementalquintree/build/IncrementalQuinTree');
 
 class FastSemaphore extends BaseSemaphore {
-    genIdentityCommitment(identity: Identity, hasher: string): bigint {
-
-        const hash = identityCommitmentHasher[hasher];
-        if (!hash) throw new Error(`${hasher} identityCommitment hasher not provided`);
-
+    genIdentityCommitment(identity: Identity): bigint {
+        if(!this.commitmentHasher) throw new Error('Hasher not set');
         const data = [identity.identityNullifier, identity.identityTrapdoor];
-        return hash(data);
+        return this.commitmentHasher(data);
     }
 
     async genProofFromIdentityCommitments(identity: Identity, 
         externalNullifier: string | bigint, 
         signal: string, 
-        identityCommitmentHasher: string,
         wasmFilePath: string, 
         finalZkeyPath: string, 
         identityCommitments: Array<BigInt>, 
@@ -25,7 +21,7 @@ class FastSemaphore extends BaseSemaphore {
         leavesPerNode: number): Promise<IWitnessData> {
 
         const tree: IncrementalQuinTree = new Tree.IncrementalQuinTree(depth, zeroValue, leavesPerNode, poseidonHash);
-        const identityCommitment: BigInt = this.genIdentityCommitment(identity, identityCommitmentHasher);
+        const identityCommitment: BigInt = this.genIdentityCommitment(identity);
         const leafIndex = identityCommitments.indexOf(identityCommitment);
         if(leafIndex === -1) throw new Error('This commitment is not registered');
         
@@ -33,7 +29,6 @@ class FastSemaphore extends BaseSemaphore {
             tree.insert(identityCommitment);
         }
 
-        console.log('leaf index', leafIndex);
         const merkleProof = tree.genMerklePath(leafIndex);
         
         const fullProof: IProof = await this.genProofFromBuiltTree(identity, merkleProof, externalNullifier, signal, wasmFilePath, finalZkeyPath);

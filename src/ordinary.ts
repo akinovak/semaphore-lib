@@ -1,24 +1,20 @@
 const { groth16 } = require('snarkjs');
 const circomlib = require('circomlib');
 import BaseSemaphore from './base';
-import { identityCommitmentHasher, poseidonHash } from './common';
+import { poseidonHash } from './common';
 import { EdDSASignature, Identity, IncrementalQuinTree, IProof, IWitnessData } from './types';
 const Tree = require('incrementalquintree/build/IncrementalQuinTree');
 
 class OrdinarySemaphore extends BaseSemaphore {
-    genIdentityCommitment(identity: Identity, hasher: string): bigint {
-
-        const hash = identityCommitmentHasher[hasher];
-        if (!hash) throw new Error(`${hasher} identityCommitment hasher not provided`);
-
+    genIdentityCommitment(identity: Identity): bigint {
+        if(!this.commitmentHasher) throw new Error('Hasher not set');
         const data = [circomlib.babyJub.mulPointEscalar(identity.keypair.pubKey, 8)[0], identity.identityNullifier, identity.identityTrapdoor];
-        return hash(data);
+        return this.commitmentHasher(data);
     }
 
     async genProofFromIdentityCommitments(identity: Identity, 
         externalNullifier: string, 
         signal: string,
-        identityCommitmentHasher: string,
         wasmFilePath: string, 
         finalZkeyPath: string, 
         identityCommitments: Array<BigInt>, 
@@ -26,7 +22,7 @@ class OrdinarySemaphore extends BaseSemaphore {
         leavesPerNode: number): Promise<IWitnessData> {
 
         const tree: IncrementalQuinTree = new Tree.IncrementalQuinTree(depth, zeroValue, leavesPerNode, poseidonHash);
-        const identityCommitment: BigInt = this.genIdentityCommitment(identity, identityCommitmentHasher);
+        const identityCommitment: BigInt = this.genIdentityCommitment(identity);
         const leafIndex = identityCommitments.indexOf(identityCommitment);
         if(leafIndex === -1) throw new Error('This commitment is not registered');
 

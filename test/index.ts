@@ -11,9 +11,11 @@ async function testFastSemaphore() {
     const leafIndex = 3;
     const idCommitments: Array<any> = [];
 
+    FastSemaphore.setHasher('poseidon');
+
     for (let i=0; i<leafIndex;i++) {
       const tmpIdentity = FastSemaphore.genIdentity();
-      const tmpCommitment: any = FastSemaphore.genIdentityCommitment(tmpIdentity, 'poseidon');
+      const tmpCommitment: any = FastSemaphore.genIdentityCommitment(tmpIdentity);
       idCommitments.push(tmpCommitment);
     }
 
@@ -21,7 +23,7 @@ async function testFastSemaphore() {
     const externalNullifier: string = FastSemaphore.genExternalNullifier("voting_1");
     const signal: string = '0x111';
     const nullifierHash: BigInt = FastSemaphore.genNullifierHash(externalNullifier, identity.identityNullifier, 20);
-    const identityCommitment: BigInt = FastSemaphore.genIdentityCommitment(identity, 'poseidon');
+    const identityCommitment: BigInt = FastSemaphore.genIdentityCommitment(identity);
     idCommitments.push(identityCommitment);
 
     const vkeyPath: string = path.join('./fast-zkeyFiles', 'verification_key.json');
@@ -30,7 +32,7 @@ async function testFastSemaphore() {
     const wasmFilePath: string = path.join('./fast-zkeyFiles', 'semaphore.wasm');
     const finalZkeyPath: string = path.join('./fast-zkeyFiles', 'semaphore_final.zkey');
 
-    const witnessData: IWitnessData = await FastSemaphore.genProofFromIdentityCommitments(identity, externalNullifier, signal, 'poseidon', wasmFilePath, finalZkeyPath, 
+    const witnessData: IWitnessData = await FastSemaphore.genProofFromIdentityCommitments(identity, externalNullifier, signal, wasmFilePath, finalZkeyPath, 
         idCommitments, 20, ZERO_VALUE, 5);
     const pubSignals = [witnessData.root, nullifierHash, FastSemaphore.genSignalHash(signal), externalNullifier];
 
@@ -46,9 +48,11 @@ async function testOrdinarySemaphore() {
     const leafIndex = 3;
     const idCommitments: Array<any> = [];
 
+    OrdinarySemaphore.setHasher('pedersen');
+
     for (let i=0; i<leafIndex;i++) {
       const tmpIdentity = OrdinarySemaphore.genIdentity();
-      const tmpCommitment: any = OrdinarySemaphore.genIdentityCommitment(tmpIdentity, 'poseidon');
+      const tmpCommitment: any = OrdinarySemaphore.genIdentityCommitment(tmpIdentity);
       idCommitments.push(tmpCommitment);
     }
 
@@ -56,7 +60,7 @@ async function testOrdinarySemaphore() {
     const externalNullifier = OrdinarySemaphore.genExternalNullifier("voting_1");
     const signal: string = '0x111';
     const nullifierHash: BigInt = OrdinarySemaphore.genNullifierHash(externalNullifier, identity.identityNullifier, 20);
-    const identityCommitment: BigInt = OrdinarySemaphore.genIdentityCommitment(identity, 'pedersen');
+    const identityCommitment: BigInt = OrdinarySemaphore.genIdentityCommitment(identity);
     idCommitments.push(identityCommitment);
 
     const vkeyPath: string = path.join('./ordinary-zkeyFiles', 'verification_key.json');
@@ -65,7 +69,7 @@ async function testOrdinarySemaphore() {
     const wasmFilePath: string = path.join('./ordinary-zkeyFiles', 'semaphore.wasm');
     const finalZkeyPath: string = path.join('./ordinary-zkeyFiles', 'semaphore_final.zkey');
 
-    const witnessData: IWitnessData = await OrdinarySemaphore.genProofFromIdentityCommitments(identity, externalNullifier, signal, 'pedersen', wasmFilePath, finalZkeyPath, 
+    const witnessData: IWitnessData = await OrdinarySemaphore.genProofFromIdentityCommitments(identity, externalNullifier, signal, wasmFilePath, finalZkeyPath, 
         idCommitments, 20, ZERO_VALUE, 5);
     const pubSignals = [witnessData.root, nullifierHash, OrdinarySemaphore.genSignalHash(signal), externalNullifier];
 
@@ -80,7 +84,7 @@ async function testOrdinarySemaphore() {
 
 
 (async () => {
-    // await testFastSemaphore();
+    await testFastSemaphore();
     await testOrdinarySemaphore();
     process.exit(0);
 })();
