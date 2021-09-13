@@ -1,4 +1,5 @@
 const { groth16 } = require('snarkjs');
+const circomlib = require('circomlib');
 import BaseSemaphore from './base';
 import { identityCommitmentHasher, poseidonHash } from './common';
 import { EdDSASignature, Identity, IncrementalQuinTree, IProof, IWitnessData } from './types';
@@ -10,7 +11,7 @@ class OrdinarySemaphore extends BaseSemaphore {
         const hash = identityCommitmentHasher[hasher];
         if (!hash) throw new Error(`${hasher} identityCommitment hasher not provided`);
 
-        const data = [identity.identityNullifier, identity.identityTrapdoor];
+        const data = [circomlib.babyJub.mulPointEscalar(identity.keypair.pubKey, 8)[0], identity.identityNullifier, identity.identityTrapdoor];
         return hash(data);
     }
 
@@ -31,10 +32,8 @@ class OrdinarySemaphore extends BaseSemaphore {
 
         for(const identityCommitment of identityCommitments) {
             tree.insert(identityCommitment);
-            console.log(tree.root);
         }
 
-        console.log('leaf index', leafIndex)
         const merkleProof = tree.genMerklePath(leafIndex);
 
         const fullProof: IProof = await this.genProofFromBuiltTree(identity, signal, merkleProof, externalNullifier, wasmFilePath, finalZkeyPath);
