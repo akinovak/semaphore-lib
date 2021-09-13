@@ -6,7 +6,7 @@ import { EddsaPrivateKey, EddsaPublicKey, EdDSASignature, Hasher, Identity, Incr
 const { groth16 } = require('snarkjs');
 const Tree = require('incrementalquintree/build/IncrementalQuinTree');
 
-const SNARK_FIELD_SIZE: BigInt = BigInt("21888242871839275222246405745257275088548364400416034343698204186575808495617");
+const SNARK_FIELD_SIZE: bigint = BigInt("21888242871839275222246405745257275088548364400416034343698204186575808495617");
 
 class BaseSemaphore {
 
@@ -87,7 +87,7 @@ class BaseSemaphore {
             c: proof.pi_c.slice(0, 2),
             inputs: publicSignals.map((x:any) => {
                 x = BigInt(x);
-                return x.mod(SNARK_FIELD_SIZE).toString()
+                return (x % SNARK_FIELD_SIZE).toString()
             })
         };
     }
