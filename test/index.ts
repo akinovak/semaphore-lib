@@ -36,7 +36,7 @@ async function testFastSemaphore() {
         idCommitments, 20, ZERO_VALUE, 5);
     const pubSignals = [witnessData.root, nullifierHash, FastSemaphore.genSignalHash(signal), externalNullifier];
 
-    const res = await snarkjs.groth16.verify(vKey, pubSignals, witnessData.fullProof.proof);
+    const res = await FastSemaphore.verifyProof(vKey, { proof: witnessData.fullProof.proof, publicSignals: pubSignals });
     if (res === true) {
         console.log("Verification OK");
     } else {
@@ -73,7 +73,7 @@ async function testOrdinarySemaphore() {
         idCommitments, 20, ZERO_VALUE, 5);
     const pubSignals = [witnessData.root, nullifierHash, OrdinarySemaphore.genSignalHash(signal), externalNullifier];
 
-    const res = await snarkjs.groth16.verify(vKey, pubSignals, witnessData.fullProof.proof);
+    const res = await FastSemaphore.verifyProof(vKey, { proof: witnessData.fullProof.proof, publicSignals: pubSignals });
     if (res === true) {
         console.log("Verification OK");
     } else {
