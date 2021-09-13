@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "types": "src/index.ts",
   "scripts": {
-    "start": "ts-node test/index.ts",
+    "start": "ts-node src/namespace.ts",
     "startcl": "npm run build && node dist/index.js",
     "test": "ts-node ./test/index.ts",
     "tsc": "npx tsc src/index.ts",
@@ -16,6 +16,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "bigint-conversion": "^2.1.12",
     "circomlib": "^0.5.3",
     "ethers": "^5.4.1",
     "incrementalquintree": "^1.0.7",

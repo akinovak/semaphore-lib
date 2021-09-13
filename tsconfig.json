@@ -17,5 +17,5 @@
         "lib": [ "es2017" ]
     },
     "include": ["./src/**/*"],
-    "exclude": ["node_modules/**", "zkeyFiles"]
+    "exclude": ["node_modules/**", "fast-zkeyFiles", "ordinary-zkeyFiles"]
   }
