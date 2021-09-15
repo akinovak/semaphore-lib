@@ -228,10 +228,11 @@ async function testRLN() {
     const proof = await groth16.fullProve(grothInput, wasmFilePath, finalZkeyPath);
     console.log(proof.publicSignals);
 
-    const a1 = circomlib.poseidon([identitySecret, epoch]);
-
-    console.log('nullifier', circomlib.poseidon([a1]))
+    const a1: bigint = circomlib.poseidon([identitySecret, epoch]);
+    const y = a1 * signalHash + identitySecret;
+    console.log('y', y);
     console.log('root', tree.root);
+    console.log('nullifier', circomlib.poseidon([a1]))
 
     console.log('-----');
     console.log(signalHash);
