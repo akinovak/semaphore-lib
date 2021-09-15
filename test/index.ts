@@ -5,6 +5,11 @@ import * as fs from 'fs';
 import { IWitnessData } from '../src/types';
 const snarkjs = require('snarkjs');
 
+//temporary until I inject it into lib
+import * as bigintConversion from 'bigint-conversion';
+import * as circomlib from 'circomlib';
+const { groth16 } = require('snarkjs');
+
 const ZERO_VALUE = BigInt(ethers.utils.solidityKeccak256(['bytes'], [ethers.utils.toUtf8Bytes('Semaphore')]));
 
 async function testFastSemaphore() {
@@ -176,13 +181,69 @@ async function testOxContractState() {
     }
 }
 
+async function testRLN() {
+    const identity = OrdinarySemaphore.genIdentity();
 
+    const leafIndex = 3;
+    const idCommitments: Array<any> = [];
+
+    // OrdinarySemaphore.setHasher('poseidon');
+
+    const tree = OrdinarySemaphore.createTree(15, BigInt(0), 2);
+    for (let i=0; i<leafIndex;i++) {
+      const tmpIdentity = OrdinarySemaphore.genIdentity();
+      const tmpIdentitySecret: bigint = bigintConversion.bufToBigint(tmpIdentity.keypair.privKey);
+      const tmpCommitment: any = circomlib.poseidon([tmpIdentitySecret]);
+      idCommitments.push(tmpCommitment);
+      tree.insert(tmpCommitment);
+    }
+
+    // const merkleProof = tree.genMerklePath(leafIndex - 1);
+
+    //handle private
+    const identitySecret: bigint = bigintConversion.bufToBigint(identity.keypair.privKey);
+    const identityCommitment = circomlib.poseidon([identitySecret]);
+    tree.insert(identityCommitment);
+    const merkleProof = tree.genMerklePath(leafIndex);
+
+    //handle public
+    const signal = bigintConversion.bigintToHex(BigInt(1111));
+    const signalHash = circomlib.poseidon([signal]); //keccak here probably
+    const epoch = OrdinarySemaphore.genExternalNullifier('test-epoch');
+
+    const vkeyPath: string = path.join('./rln-zkeyFiles', 'verification_key.json');
+    const vKey = JSON.parse(fs.readFileSync(vkeyPath, 'utf-8'));
+
+    const wasmFilePath: string = path.join('./rln-zkeyFiles', 'rln.wasm');
+    const finalZkeyPath: string = path.join('./rln-zkeyFiles', 'rln_final.zkey');
+
+    const grothInput: any = {
+        identity_secret: identitySecret,
+        path_elements: merkleProof.pathElements,
+        identity_path_index: merkleProof.indices,
+        epoch,
+        x: signalHash,
+    }
+
+    const proof = await groth16.fullProve(grothInput, wasmFilePath, finalZkeyPath);
+    console.log(proof.publicSignals);
+
+    const a1 = circomlib.poseidon([identitySecret, epoch]);
+
+    console.log('nullifier', circomlib.poseidon([a1]))
+    console.log('root', tree.root);
+
+    console.log('-----');
+    console.log(signalHash);
+    console.log(BigInt(epoch));
+}
 
 
 (async () => {
     // await testFastSemaphore();
     // await testOrdinarySemaphore();
     // await testOxSemaphore();
-    await testOxContractState();
+    // await testOxContractState();
+    await testRLN();
     process.exit(0);
 })();
