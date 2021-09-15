@@ -9,6 +9,7 @@ const snarkjs = require('snarkjs');
 import * as bigintConversion from 'bigint-conversion';
 import * as circomlib from 'circomlib';
 const { groth16 } = require('snarkjs');
+const SNARK_FIELD_SIZE: bigint = BigInt("21888242871839275222246405745257275088548364400416034343698204186575808495617");
 
 const ZERO_VALUE = BigInt(ethers.utils.solidityKeccak256(['bytes'], [ethers.utils.toUtf8Bytes('Semaphore')]));
 
@@ -229,14 +230,27 @@ async function testRLN() {
     console.log(proof.publicSignals);
 
     const a1: bigint = circomlib.poseidon([identitySecret, epoch]);
-    const y = a1 * signalHash + identitySecret;
+    // identity_secret + a_1.out * x
+    const y = (a1 * signalHash + identitySecret) % SNARK_FIELD_SIZE;
+    const nullifier = circomlib.poseidon([a1])
     console.log('y', y);
     console.log('root', tree.root);
-    console.log('nullifier', circomlib.poseidon([a1]))
+    console.log('nullifier', nullifier)
 
     console.log('-----');
     console.log(signalHash);
     console.log(BigInt(epoch));
+
+    // console.log(proof.proof);
+
+
+    const res = await groth16.verify(vKey, [y, tree.root, nullifier, signalHash, epoch], proof.proof)
+    if (res === true) {
+        console.log("Verification OK");
+    } else {
+        console.log("Invalid proof");
+    }
+    
 }
 
 
