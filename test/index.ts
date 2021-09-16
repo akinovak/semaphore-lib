@@ -1,5 +1,5 @@
 import * as ethers from 'ethers';
-import { FastSemaphore, OrdinarySemaphore, Identity } from '../src/index';
+import { FastSemaphore, OrdinarySemaphore, Identity, RLN } from '../src/index';
 import * as path from 'path';
 import * as fs from 'fs';
 import { IWitnessData } from '../src/types';
@@ -183,34 +183,25 @@ async function testOxContractState() {
 }
 
 async function testRLN() {
-    const identity = OrdinarySemaphore.genIdentity();
+    RLN.setHasher('poseidon');
+    const identity = RLN.genIdentity();
 
     const leafIndex = 3;
     const idCommitments: Array<any> = [];
 
-    // OrdinarySemaphore.setHasher('poseidon');
-
-    const tree = OrdinarySemaphore.createTree(15, BigInt(0), 2);
     for (let i=0; i<leafIndex;i++) {
       const tmpIdentity = OrdinarySemaphore.genIdentity();
       const tmpIdentitySecret: bigint = bigintConversion.bufToBigint(tmpIdentity.keypair.privKey);
       const tmpCommitment: any = circomlib.poseidon([tmpIdentitySecret]);
       idCommitments.push(tmpCommitment);
-      tree.insert(tmpCommitment);
     }
 
-    // const merkleProof = tree.genMerklePath(leafIndex - 1);
 
-    //handle private
-    const identitySecret: bigint = bigintConversion.bufToBigint(identity.keypair.privKey);
-    const identityCommitment = circomlib.poseidon([identitySecret]);
-    tree.insert(identityCommitment);
-    const merkleProof = tree.genMerklePath(leafIndex);
+    idCommitments.push(RLN.genIdentityCommitment(identity))
 
-    //handle public
-    const signal = bigintConversion.bigintToHex(BigInt(1111));
-    const signalHash = circomlib.poseidon([signal]); //keccak here probably
-    const epoch = OrdinarySemaphore.genExternalNullifier('test-epoch');
+    const signal = 'hey hey';
+    const signalHash: bigint = OrdinarySemaphore.genSignalHash(signal);
+    const epoch: string = OrdinarySemaphore.genExternalNullifier('test-epoch');
 
     const vkeyPath: string = path.join('./rln-zkeyFiles', 'verification_key.json');
     const vKey = JSON.parse(fs.readFileSync(vkeyPath, 'utf-8'));
@@ -218,39 +209,20 @@ async function testRLN() {
     const wasmFilePath: string = path.join('./rln-zkeyFiles', 'rln.wasm');
     const finalZkeyPath: string = path.join('./rln-zkeyFiles', 'rln_final.zkey');
 
-    const grothInput: any = {
-        identity_secret: identitySecret,
-        path_elements: merkleProof.pathElements,
-        identity_path_index: merkleProof.indices,
-        epoch,
-        x: signalHash,
-    }
+    const witnessData: IWitnessData = await RLN.genProofFromIdentityCommitments(identity, epoch, signal, wasmFilePath, finalZkeyPath, idCommitments, 15, BigInt(0), 2);
 
-    const proof = await groth16.fullProve(grothInput, wasmFilePath, finalZkeyPath);
-    console.log(proof.publicSignals);
+    const a1 = RLN.calculateA1(identity, epoch);
+    const y = RLN.calculateY(a1, identity, signalHash);
+    const nullifier = RLN.genNullifier(a1);
 
-    const a1: bigint = circomlib.poseidon([identitySecret, epoch]);
-    // identity_secret + a_1.out * x
-    const y = (a1 * signalHash + identitySecret) % SNARK_FIELD_SIZE;
-    const nullifier = circomlib.poseidon([a1])
-    console.log('y', y);
-    console.log('root', tree.root);
-    console.log('nullifier', nullifier)
+    const pubSignals = [y, witnessData.root, nullifier, signalHash, epoch];
 
-    console.log('-----');
-    console.log(signalHash);
-    console.log(BigInt(epoch));
-
-    // console.log(proof.proof);
-
-
-    const res = await groth16.verify(vKey, [y, tree.root, nullifier, signalHash, epoch], proof.proof)
+    const res = await RLN.verifyProof(vKey, { proof: witnessData.fullProof.proof, publicSignals: pubSignals })
     if (res === true) {
         console.log("Verification OK");
     } else {
         console.log("Invalid proof");
     }
-    
 }
 
 

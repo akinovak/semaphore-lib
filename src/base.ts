@@ -1,12 +1,10 @@
 import * as ethers from 'ethers';
 const circomlib = require('circomlib');
 import * as bigintConversion from 'bigint-conversion';
-import { genEddsaKeyPair, genRandomBuffer, identityCommitmentHasher, poseidonHash } from "./common";
+import { genEddsaKeyPair, genRandomBuffer, identityCommitmentHasher, poseidonHash, SNARK_FIELD_SIZE } from "./common";
 import { EddsaPrivateKey, EddsaPublicKey, EdDSASignature, Hasher, Identity, IncrementalQuinTree, IProof } from './types';
 const { groth16 } = require('snarkjs');
 const Tree = require('incrementalquintree/build/IncrementalQuinTree');
-
-const SNARK_FIELD_SIZE: bigint = BigInt("21888242871839275222246405745257275088548364400416034343698204186575808495617");
 
 class BaseSemaphore {
 
@@ -64,7 +62,7 @@ class BaseSemaphore {
         )
     }
     
-    genSignalHash(signal: string): BigInt {
+    genSignalHash(signal: string): bigint {
         const converted = ethers.utils.hexlify(ethers.utils.toUtf8Bytes(signal));
         return BigInt(ethers.utils.solidityKeccak256(['bytes'], [converted])) >> BigInt(8);
     }

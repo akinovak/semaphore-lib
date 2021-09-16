@@ -3,6 +3,7 @@ import * as circomlib from 'circomlib';
 import { EddsaKeyPair, EddsaPrivateKey, EddsaPublicKey, Hasher } from './types';
 const utils = require("ffjavascript").utils;
 
+const SNARK_FIELD_SIZE: bigint = BigInt("21888242871839275222246405745257275088548364400416034343698204186575808495617");
 
 const poseidonHash = (inputs: bigint[]): bigint => {
     return circomlib.poseidon(inputs)
@@ -50,5 +51,6 @@ export {
     genRandomBuffer,
     genPubKey,
     genEddsaKeyPair,
-    identityCommitmentHasher
+    identityCommitmentHasher,
+    SNARK_FIELD_SIZE
 }
