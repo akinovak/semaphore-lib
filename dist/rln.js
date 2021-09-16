@@ -73,7 +73,7 @@ var RLN = /** @class */ (function (_super) {
     };
     RLN.prototype.calculateY = function (a1, identity, signalHash) {
         var identitySecret = this.calculateIdentitySecret(identity);
-        return (a1 * signalHash + identitySecret) % common_1.SNARK_FIELD_SIZE;
+        return Fq.normalize(a1 * signalHash + identitySecret);
     };
     RLN.prototype.genNullifier = function (a1) {
         return (0, common_1.poseidonHash)([a1]);

@@ -21,7 +21,7 @@ class RLN extends BaseSemaphore {
     
     calculateY(a1:bigint, identity: Identity, signalHash: bigint): bigint {
         const identitySecret: bigint = this.calculateIdentitySecret(identity);
-        return (a1 * signalHash + identitySecret) % SNARK_FIELD_SIZE;
+        return Fq.normalize(a1 * signalHash + identitySecret);
     }
 
     genNullifier(a1: bigint): bigint {
