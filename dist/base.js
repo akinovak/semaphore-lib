@@ -6,7 +6,6 @@ var bigintConversion = require("bigint-conversion");
 var common_1 = require("./common");
 var groth16 = require('snarkjs').groth16;
 var Tree = require('incrementalquintree/build/IncrementalQuinTree');
-var SNARK_FIELD_SIZE = BigInt("21888242871839275222246405745257275088548364400416034343698204186575808495617");
 var BaseSemaphore = /** @class */ (function () {
     function BaseSemaphore() {
         this.commitmentHasher = null;
@@ -73,7 +72,7 @@ var BaseSemaphore = /** @class */ (function () {
             c: proof.pi_c.slice(0, 2),
             inputs: publicSignals.map(function (x) {
                 x = BigInt(x);
-                return (x % SNARK_FIELD_SIZE).toString();
+                return (x % common_1.SNARK_FIELD_SIZE).toString();
             })
         };
     };

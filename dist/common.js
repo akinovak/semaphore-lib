@@ -1,9 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.identityCommitmentHasher = exports.genEddsaKeyPair = exports.genPubKey = exports.genRandomBuffer = exports.mimcspongeHash = exports.pedersenHash = exports.poseidonHash = void 0;
+exports.SNARK_FIELD_SIZE = exports.identityCommitmentHasher = exports.genEddsaKeyPair = exports.genPubKey = exports.genRandomBuffer = exports.mimcspongeHash = exports.pedersenHash = exports.poseidonHash = void 0;
 var crypto = require("crypto");
 var circomlib = require("circomlib");
 var utils = require("ffjavascript").utils;
+var SNARK_FIELD_SIZE = BigInt("21888242871839275222246405745257275088548364400416034343698204186575808495617");
+exports.SNARK_FIELD_SIZE = SNARK_FIELD_SIZE;
 var poseidonHash = function (inputs) {
     return circomlib.poseidon(inputs);
 };
