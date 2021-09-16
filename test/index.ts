@@ -5,11 +5,9 @@ import * as fs from 'fs';
 import { IWitnessData } from '../src/types';
 const snarkjs = require('snarkjs');
 
-//temporary until I inject it into lib
-import * as bigintConversion from 'bigint-conversion';
-import * as circomlib from 'circomlib';
-const { groth16 } = require('snarkjs');
 const SNARK_FIELD_SIZE: bigint = BigInt("21888242871839275222246405745257275088548364400416034343698204186575808495617");
+const ZqField = require('ffjavascript').ZqField;
+const Fq = new ZqField(SNARK_FIELD_SIZE);
 
 const ZERO_VALUE = BigInt(ethers.utils.solidityKeccak256(['bytes'], [ethers.utils.toUtf8Bytes('Semaphore')]));
 
@@ -157,7 +155,6 @@ async function testOxContractState() {
             },
     }
 
-    console.log(OrdinarySemaphore.genIdentityCommitment(identity) === idCommitments[10]);
     const externalNullifier = OrdinarySemaphore.genExternalNullifier("voting_1");
     const signal: string = '0x111';
     const nullifierHash: BigInt = OrdinarySemaphore.genNullifierHash(externalNullifier, identity.identityNullifier, 15);
@@ -171,8 +168,6 @@ async function testOxContractState() {
     const witnessData: IWitnessData = await OrdinarySemaphore.genProofFromIdentityCommitments(identity, externalNullifier, signal, wasmFilePath, finalZkeyPath, 
         idCommitments, 15, BigInt("0"), 2);
     const pubSignals = [witnessData.root, nullifierHash, OrdinarySemaphore.genSignalHash(signal), externalNullifier];
-
-    console.log(witnessData.root.toString(16))
     
     const res = await FastSemaphore.verifyProof(vKey, { proof: witnessData.fullProof.proof, publicSignals: pubSignals });
     if (res === true) {
@@ -191,8 +186,7 @@ async function testRLN() {
 
     for (let i=0; i<leafIndex;i++) {
       const tmpIdentity = OrdinarySemaphore.genIdentity();
-      const tmpIdentitySecret: bigint = bigintConversion.bufToBigint(tmpIdentity.keypair.privKey);
-      const tmpCommitment: any = circomlib.poseidon([tmpIdentitySecret]);
+      const tmpCommitment: any = RLN.genIdentityCommitment(tmpIdentity);
       idCommitments.push(tmpCommitment);
     }
 
@@ -225,12 +219,57 @@ async function testRLN() {
     }
 }
 
+async function testRlnSlopeCalculation() {
+    RLN.setHasher('poseidon');
+    const identity = RLN.genIdentity();
+    const identitySecret: bigint = RLN.calculateIdentitySecret(identity);
+
+    const signal1 = 'hey hey';
+    const x1: bigint = OrdinarySemaphore.genSignalHash(signal1);
+    const epoch: string = OrdinarySemaphore.genExternalNullifier('test-epoch');
+
+    const a1 = RLN.calculateA1(identity, epoch);
+    const y1 = RLN.calculateY(a1, identity, x1);
+
+    const signal2 = 'hey hey once again';
+    const x2: bigint = OrdinarySemaphore.genSignalHash(signal2);
+
+    const a2 = RLN.calculateA1(identity, epoch);
+    const y2 = RLN.calculateY(a2, identity, x2);
+
+    console.log('PK successfully retrieved: ', Fq.eq(identitySecret, RLN.retrievePrivateKey(x1, x2, y1, y2)));
+}
+
+async function testFieldArithmetic() {
+    const k = Fq.random();
+    const n = Fq.random();
+
+    const x1 = Fq.random();
+    const y1 = Fq.add(Fq.mul(k, x1), n);
+
+    const x2 = Fq.random();
+    const y2 = Fq.add(Fq.mul(k, x2), n);
+
+    const ydiff = Fq.sub(y2, y1);
+    const xdiff = Fq.sub(x2, x1);
+
+    // console.log(ydiff, xdiff);
+
+    const slope = Fq.div(ydiff, xdiff);
+    const retrievedN = Fq.sub(y1, Fq.mul(x1, slope));
+
+    console.log(Fq.eq(n, retrievedN));
+
+}
+
 
 (async () => {
-    // await testFastSemaphore();
-    // await testOrdinarySemaphore();
-    // await testOxSemaphore();
-    // await testOxContractState();
+    await testFastSemaphore();
+    await testOrdinarySemaphore();
+    await testOxSemaphore();
+    await testOxContractState();
     await testRLN();
+    await testRlnSlopeCalculation();
+    await testFieldArithmetic();
     process.exit(0);
 })();

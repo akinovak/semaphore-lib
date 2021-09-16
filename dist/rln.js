@@ -56,26 +56,36 @@ var base_1 = require("./base");
 var common_1 = require("./common");
 var Tree = require('incrementalquintree/build/IncrementalQuinTree');
 var bigintConversion = require("bigint-conversion");
+var ZqField = require('ffjavascript').ZqField;
+var Fq = new ZqField(common_1.SNARK_FIELD_SIZE);
 var RLN = /** @class */ (function (_super) {
     __extends(RLN, _super);
     function RLN() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
-    RLN.prototype.calculateA1 = function (identity, epoch) {
+    RLN.prototype.calculateIdentitySecret = function (identity) {
         var identitySecret = bigintConversion.bufToBigint(identity.keypair.privKey);
+        return Fq.normalize(identitySecret);
+    };
+    RLN.prototype.calculateA1 = function (identity, epoch) {
+        var identitySecret = this.calculateIdentitySecret(identity);
         return (0, common_1.poseidonHash)([identitySecret, BigInt(epoch)]);
     };
     RLN.prototype.calculateY = function (a1, identity, signalHash) {
-        var identitySecret = bigintConversion.bufToBigint(identity.keypair.privKey);
+        var identitySecret = this.calculateIdentitySecret(identity);
         return (a1 * signalHash + identitySecret) % common_1.SNARK_FIELD_SIZE;
     };
     RLN.prototype.genNullifier = function (a1) {
         return (0, common_1.poseidonHash)([a1]);
     };
+    RLN.prototype.retrievePrivateKey = function (x1, x2, y1, y2) {
+        var slope = Fq.div(Fq.sub(y2, y1), Fq.sub(x2, x1));
+        return Fq.sub(y1, Fq.mul(slope, x1));
+    };
     RLN.prototype.genIdentityCommitment = function (identity) {
         if (!this.commitmentHasher)
             throw new Error('Hasher not set');
-        var identitySecret = bigintConversion.bufToBigint(identity.keypair.privKey);
+        var identitySecret = this.calculateIdentitySecret(identity);
         var data = [identitySecret];
         return this.commitmentHasher(data);
     };
@@ -111,7 +121,7 @@ var RLN = /** @class */ (function (_super) {
         return __awaiter(this, void 0, void 0, function () {
             var identitySecret, grothInput;
             return __generator(this, function (_a) {
-                identitySecret = bigintConversion.bufToBigint(identity.keypair.privKey);
+                identitySecret = this.calculateIdentitySecret(identity);
                 grothInput = {
                     identity_secret: identitySecret,
                     path_elements: merkleProof.pathElements,

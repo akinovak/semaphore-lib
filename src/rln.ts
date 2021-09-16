@@ -4,15 +4,23 @@ import { poseidonHash, SNARK_FIELD_SIZE } from './common';
 import { Identity, IncrementalQuinTree, IProof, IWitnessData } from './types';
 const Tree = require('incrementalquintree/build/IncrementalQuinTree');
 import * as bigintConversion from 'bigint-conversion';
+const ZqField = require('ffjavascript').ZqField;
+const Fq = new ZqField(SNARK_FIELD_SIZE);
 
 class RLN extends BaseSemaphore {
+
+    calculateIdentitySecret(identity: Identity): bigint {
+        const identitySecret: bigint = bigintConversion.bufToBigint(identity.keypair.privKey); 
+        return Fq.normalize(identitySecret);
+    }
+
     calculateA1(identity: Identity, epoch: string) {
-        const identitySecret: bigint = bigintConversion.bufToBigint(identity.keypair.privKey);
+        const identitySecret: bigint = this.calculateIdentitySecret(identity);
         return poseidonHash([identitySecret, BigInt(epoch)])
     }
     
     calculateY(a1:bigint, identity: Identity, signalHash: bigint): bigint {
-        const identitySecret: bigint = bigintConversion.bufToBigint(identity.keypair.privKey);
+        const identitySecret: bigint = this.calculateIdentitySecret(identity);
         return (a1 * signalHash + identitySecret) % SNARK_FIELD_SIZE;
     }
 
@@ -20,9 +28,14 @@ class RLN extends BaseSemaphore {
         return poseidonHash([a1]);
     }
 
+    retrievePrivateKey(x1: bigint, x2:bigint, y1:bigint, y2:bigint) {
+        const slope = Fq.div(Fq.sub(y2, y1), Fq.sub(x2, x1))
+        return Fq.sub(y1, Fq.mul(slope, x1));
+    }
+
     genIdentityCommitment(identity: Identity): bigint {
         if(!this.commitmentHasher) throw new Error('Hasher not set');
-        const identitySecret: bigint = bigintConversion.bufToBigint(identity.keypair.privKey);
+        const identitySecret: bigint = this.calculateIdentitySecret(identity);
         const data = [identitySecret];
         return this.commitmentHasher(data);
     }
@@ -58,7 +71,7 @@ class RLN extends BaseSemaphore {
     async genProofFromBuiltTree(identity: Identity, merkleProof: any, epoch: string | bigint, signal: string, 
         wasmFilePath: string, finalZkeyPath: string): Promise<IProof> {
 
-            const identitySecret: bigint = bigintConversion.bufToBigint(identity.keypair.privKey);
+            const identitySecret: bigint = this.calculateIdentitySecret(identity);
 
             const grothInput: any = {
                 identity_secret: identitySecret,
