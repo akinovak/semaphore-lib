@@ -190,7 +190,6 @@ async function testRLN() {
       idCommitments.push(tmpCommitment);
     }
 
-
     idCommitments.push(RLN.genIdentityCommitment(identity))
 
     const signal = 'hey hey';
@@ -240,6 +239,79 @@ async function testRlnSlopeCalculation() {
     console.log('PK successfully retrieved: ', Fq.eq(identitySecret, RLN.retrievePrivateKey(x1, x2, y1, y2)));
 }
 
+
+async function testRlnSlashingSimulation() {
+    RLN.setHasher('poseidon');
+    const identity = RLN.genIdentity();
+
+    const leafIndex = 3;
+    const idCommitments: Array<any> = [];
+
+    for (let i=0; i<leafIndex;i++) {
+      const tmpIdentity = OrdinarySemaphore.genIdentity();
+      const tmpCommitment: any = RLN.genIdentityCommitment(tmpIdentity);
+      idCommitments.push(tmpCommitment);
+    }
+
+    idCommitments.push(RLN.genIdentityCommitment(identity))
+
+    const signal = 'hey hey';
+    const x1: bigint = OrdinarySemaphore.genSignalHash(signal);
+    const epoch: string = OrdinarySemaphore.genExternalNullifier('test-epoch');
+
+    const vkeyPath: string = path.join('./rln-zkeyFiles', 'verification_key.json');
+    const vKey = JSON.parse(fs.readFileSync(vkeyPath, 'utf-8'));
+
+    const wasmFilePath: string = path.join('./rln-zkeyFiles', 'rln.wasm');
+    const finalZkeyPath: string = path.join('./rln-zkeyFiles', 'rln_final.zkey');
+
+    const witnessData: IWitnessData = await RLN.genProofFromIdentityCommitments(identity, epoch, signal, wasmFilePath, finalZkeyPath, idCommitments, 15, BigInt(0), 2);
+
+    const a1 = RLN.calculateA1(identity, epoch);
+    const y1 = RLN.calculateY(a1, identity, x1);
+    const nullifier = RLN.genNullifier(a1);
+
+    const pubSignals = [y1, witnessData.root, nullifier, x1, epoch];
+
+    let res = await RLN.verifyProof(vKey, { proof: witnessData.fullProof.proof, publicSignals: pubSignals })
+    if (res === true) {
+        console.log("Verification OK");
+    } else {
+        console.log("Invalid proof");
+        return;
+    }
+
+    const signalSpam = "let's try spamming";
+    const x2: bigint = OrdinarySemaphore.genSignalHash(signalSpam);
+
+    const witnessDataSpam: IWitnessData = await RLN.genProofFromIdentityCommitments(identity, epoch, signalSpam, wasmFilePath, finalZkeyPath, idCommitments, 15, BigInt(0), 2);
+
+    const a1Spam = RLN.calculateA1(identity, epoch);
+    const y2 = RLN.calculateY(a1Spam, identity, x2);
+    const nullifierSpam = RLN.genNullifier(a1Spam);
+
+    const pubSignalsSpam = [y2, witnessDataSpam.root, nullifierSpam, x2, epoch];
+
+    res = await RLN.verifyProof(vKey, { proof: witnessDataSpam.fullProof.proof, publicSignals: pubSignalsSpam })
+    if (res === true) {
+        console.log("Spam proof Verification OK");
+    } else {
+        console.log("Invalid proof");
+        return;
+    }
+
+    const identitySecret = RLN.calculateIdentitySecret(identity);
+
+    if(Fq.eq(identitySecret, RLN.retrievePrivateKey(x1, x2, y1, y2))) {
+        console.log("PK successfully reconstructed");
+    } else {
+        console.log("Error while reconstructing private key")
+    }
+
+    // TODO: Add removal from tree example
+}
+
+
 async function testFieldArithmetic() {
     const k = Fq.random();
     const n = Fq.random();
@@ -271,5 +343,6 @@ async function testFieldArithmetic() {
     await testRLN();
     await testRlnSlopeCalculation();
     await testFieldArithmetic();
+    await testRlnSlashingSimulation();
     process.exit(0);
 })();
