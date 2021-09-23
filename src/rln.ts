@@ -28,10 +28,10 @@ class RLN extends BaseSemaphore {
         return poseidonHash([a1]);
     }
 
-    retrievePrivateKey(x1: bigint, x2:bigint, y1:bigint, y2:bigint): bigint {
+    retrievePrivateKey(x1: bigint, x2:bigint, y1:bigint, y2:bigint): Buffer | ArrayBuffer {
         const slope = Fq.div(Fq.sub(y2, y1), Fq.sub(x2, x1))
         const privateKey = Fq.sub(y1, Fq.mul(slope, x1));
-        return Fq.normalize(privateKey);
+        return bigintConversion.bigintToBuf(Fq.normalize(privateKey));
     }
 
     genIdentityCommitment(privateKey: Buffer): bigint {
