@@ -3,6 +3,8 @@ import { FastSemaphore, OrdinarySemaphore, Identity, RLN } from '../src/index';
 import * as path from 'path';
 import * as fs from 'fs';
 import { IWitnessData } from '../src/types';
+import * as bigintConversion from 'bigint-conversion';
+
 const snarkjs = require('snarkjs');
 
 const SNARK_FIELD_SIZE: bigint = BigInt("21888242871839275222246405745257275088548364400416034343698204186575808495617");
@@ -239,7 +241,9 @@ async function testRlnSlopeCalculation() {
     const a2 = RLN.calculateA1(privateKey, epoch);
     const y2 = RLN.calculateY(a2, privateKey, x2);
 
-    console.log('PK successfully retrieved: ', Fq.eq(identitySecret, RLN.retrievePrivateKey(x1, x2, y1, y2)));
+    const retreivedPkey = bigintConversion.bufToBigint(RLN.retrievePrivateKey(x1, x2, y1, y2))
+
+    console.log('PK successfully retrieved: ', Fq.eq(identitySecret, retreivedPkey));
 }
 
 
@@ -306,7 +310,10 @@ async function testRlnSlashingSimulation() {
 
     const identitySecret = RLN.calculateIdentitySecret(privateKey);
 
-    if(Fq.eq(identitySecret, RLN.retrievePrivateKey(x1, x2, y1, y2))) {
+    const retreivedPkey = bigintConversion.bufToBigint(RLN.retrievePrivateKey(x1, x2, y1, y2));
+
+
+    if(Fq.eq(identitySecret, retreivedPkey)) {
         console.log("PK successfully reconstructed");
     } else {
         console.log("Error while reconstructing private key")
