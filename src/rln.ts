@@ -9,18 +9,18 @@ const Fq = new ZqField(SNARK_FIELD_SIZE);
 
 class RLN extends BaseSemaphore {
 
-    calculateIdentitySecret(identity: Identity): bigint {
-        const identitySecret: bigint = bigintConversion.bufToBigint(identity.keypair.privKey); 
+    calculateIdentitySecret(privateKey: Buffer): bigint {
+        const identitySecret: bigint = bigintConversion.bufToBigint(privateKey); 
         return Fq.normalize(identitySecret);
     }
 
-    calculateA1(identity: Identity, epoch: string) {
-        const identitySecret: bigint = this.calculateIdentitySecret(identity);
+    calculateA1(privateKey: Buffer, epoch: string) {
+        const identitySecret: bigint = this.calculateIdentitySecret(privateKey);
         return poseidonHash([identitySecret, BigInt(epoch)])
     }
     
-    calculateY(a1:bigint, identity: Identity, signalHash: bigint): bigint {
-        const identitySecret: bigint = this.calculateIdentitySecret(identity);
+    calculateY(a1:bigint, privateKey: Buffer, signalHash: bigint): bigint {
+        const identitySecret: bigint = this.calculateIdentitySecret(privateKey);
         return Fq.normalize(a1 * signalHash + identitySecret);
     }
 
@@ -28,19 +28,21 @@ class RLN extends BaseSemaphore {
         return poseidonHash([a1]);
     }
 
-    retrievePrivateKey(x1: bigint, x2:bigint, y1:bigint, y2:bigint) {
+    retrievePrivateKey(x1: bigint, x2:bigint, y1:bigint, y2:bigint): bigint {
         const slope = Fq.div(Fq.sub(y2, y1), Fq.sub(x2, x1))
-        return Fq.sub(y1, Fq.mul(slope, x1));
+        const privateKey = Fq.sub(y1, Fq.mul(slope, x1));
+        return Fq.normalize(privateKey);
     }
 
-    genIdentityCommitment(identity: Identity): bigint {
+    genIdentityCommitment(privateKey: Buffer): bigint {
         if(!this.commitmentHasher) throw new Error('Hasher not set');
-        const identitySecret: bigint = this.calculateIdentitySecret(identity);
+        const identitySecret: bigint = this.calculateIdentitySecret(privateKey);
         const data = [identitySecret];
         return this.commitmentHasher(data);
     }
 
-    async genProofFromIdentityCommitments(identity: Identity, 
+
+    async genProofFromIdentityCommitments(privateKey: Buffer, 
         epoch: string | bigint, 
         signal: string, 
         wasmFilePath: string, 
@@ -50,7 +52,7 @@ class RLN extends BaseSemaphore {
         leavesPerNode: number): Promise<IWitnessData> {
 
         const tree: IncrementalQuinTree = new Tree.IncrementalQuinTree(depth, zeroValue, leavesPerNode, poseidonHash);
-        const identityCommitment: BigInt = this.genIdentityCommitment(identity);
+        const identityCommitment: BigInt = this.genIdentityCommitment(privateKey);
         const leafIndex = identityCommitments.indexOf(identityCommitment);
         if(leafIndex === -1) throw new Error('This commitment is not registered');
         
@@ -60,7 +62,7 @@ class RLN extends BaseSemaphore {
 
         const merkleProof = tree.genMerklePath(leafIndex);
         
-        const fullProof: IProof = await this.genProofFromBuiltTree(identity, merkleProof, epoch, signal, wasmFilePath, finalZkeyPath);
+        const fullProof: IProof = await this.genProofFromBuiltTree(privateKey, merkleProof, epoch, signal, wasmFilePath, finalZkeyPath);
         return {
             fullProof, 
             root: tree.root
@@ -68,10 +70,10 @@ class RLN extends BaseSemaphore {
     }
 
     //sometimes identityCommitments array can be to big so we must generate it on server and just use it on frontend
-    async genProofFromBuiltTree(identity: Identity, merkleProof: any, epoch: string | bigint, signal: string, 
+    async genProofFromBuiltTree(privateKey: Buffer, merkleProof: any, epoch: string | bigint, signal: string, 
         wasmFilePath: string, finalZkeyPath: string): Promise<IProof> {
 
-            const identitySecret: bigint = this.calculateIdentitySecret(identity);
+            const identitySecret: bigint = this.calculateIdentitySecret(privateKey);
 
             const grothInput: any = {
                 identity_secret: identitySecret,

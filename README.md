@@ -72,13 +72,13 @@ The difference between `OrdinarySemaphore` and `FastSemaphore` is that `FastSema
 #### RLN (inherits BaseSemaphore)
 
 ```typescript
-- calculateIdentitySecret(identity: Identity): bigint;
-- calculateA1(identity: Identity, epoch: string): bigint;
-- calculateY(a1:bigint, identity: Identity, signalHash: bigint): bigint;
+- calculateIdentitySecret(privateKey: Buffer): bigint;
+- calculateA1(privateKey: Buffer, epoch: string): bigint;
+- calculateY(a1:bigint, privateKey: Buffer, signalHash: bigint): bigint;
 - genNullifier(a1: bigint): bigint;
-- retrievePrivateKey(x1: bigint, x2:bigint, y1:bigint, y2:bigint): Fq;
-- genIdentityCommitment(identity: Identity): bigint;
-- genProofFromIdentityCommitments(identity: Identity, 
+- retrievePrivateKey(x1: bigint, x2:bigint, y1:bigint, y2:bigint): bigint;
+- genIdentityCommitment(privateKey: Buffer): bigint;
+- genProofFromIdentityCommitments(privateKey: Buffer, 
         epoch: string | bigint, 
         signal: string, 
         wasmFilePath: string, 
@@ -86,6 +86,6 @@ The difference between `OrdinarySemaphore` and `FastSemaphore` is that `FastSema
         identityCommitments: Array<BigInt>, 
         depth: number, zeroValue: BigInt, 
         leavesPerNode: number): Promise<IWitnessData>;
-- genProofFromBuiltTree(identity: Identity, merkleProof: any, epoch: string | bigint, signal: string, 
+- genProofFromBuiltTree(privateKey: Buffer, merkleProof: any, epoch: string | bigint, signal: string, 
         wasmFilePath: string, finalZkeyPath: string): Promise<IProof>;
 ```
