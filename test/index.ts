@@ -180,17 +180,18 @@ async function testOxContractState() {
 async function testRLN() {
     RLN.setHasher('poseidon');
     const identity = RLN.genIdentity();
+    const privateKey = identity.keypair.privKey;
 
     const leafIndex = 3;
     const idCommitments: Array<any> = [];
 
     for (let i=0; i<leafIndex;i++) {
       const tmpIdentity = OrdinarySemaphore.genIdentity();
-      const tmpCommitment: any = RLN.genIdentityCommitment(tmpIdentity);
+      const tmpCommitment: any = RLN.genIdentityCommitment(tmpIdentity.keypair.privKey);
       idCommitments.push(tmpCommitment);
     }
 
-    idCommitments.push(RLN.genIdentityCommitment(identity))
+    idCommitments.push(RLN.genIdentityCommitment(privateKey))
 
     const signal = 'hey hey';
     const signalHash: bigint = OrdinarySemaphore.genSignalHash(signal);
@@ -202,10 +203,10 @@ async function testRLN() {
     const wasmFilePath: string = path.join('./rln-zkeyFiles', 'rln.wasm');
     const finalZkeyPath: string = path.join('./rln-zkeyFiles', 'rln_final.zkey');
 
-    const witnessData: IWitnessData = await RLN.genProofFromIdentityCommitments(identity, epoch, signal, wasmFilePath, finalZkeyPath, idCommitments, 15, BigInt(0), 2);
+    const witnessData: IWitnessData = await RLN.genProofFromIdentityCommitments(privateKey, epoch, signal, wasmFilePath, finalZkeyPath, idCommitments, 15, BigInt(0), 2);
 
-    const a1 = RLN.calculateA1(identity, epoch);
-    const y = RLN.calculateY(a1, identity, signalHash);
+    const a1 = RLN.calculateA1(privateKey, epoch);
+    const y = RLN.calculateY(a1, privateKey, signalHash);
     const nullifier = RLN.genNullifier(a1);
 
     const pubSignals = [y, witnessData.root, nullifier, signalHash, epoch];
@@ -221,20 +222,22 @@ async function testRLN() {
 async function testRlnSlopeCalculation() {
     RLN.setHasher('poseidon');
     const identity = RLN.genIdentity();
-    const identitySecret: bigint = RLN.calculateIdentitySecret(identity);
+    const privateKey = identity.keypair.privKey;
+
+    const identitySecret: bigint = RLN.calculateIdentitySecret(privateKey);
 
     const signal1 = 'hey hey';
     const x1: bigint = OrdinarySemaphore.genSignalHash(signal1);
     const epoch: string = OrdinarySemaphore.genExternalNullifier('test-epoch');
 
-    const a1 = RLN.calculateA1(identity, epoch);
-    const y1 = RLN.calculateY(a1, identity, x1);
+    const a1 = RLN.calculateA1(privateKey, epoch);
+    const y1 = RLN.calculateY(a1, privateKey, x1);
 
     const signal2 = 'hey hey once again';
     const x2: bigint = OrdinarySemaphore.genSignalHash(signal2);
 
-    const a2 = RLN.calculateA1(identity, epoch);
-    const y2 = RLN.calculateY(a2, identity, x2);
+    const a2 = RLN.calculateA1(privateKey, epoch);
+    const y2 = RLN.calculateY(a2, privateKey, x2);
 
     console.log('PK successfully retrieved: ', Fq.eq(identitySecret, RLN.retrievePrivateKey(x1, x2, y1, y2)));
 }
@@ -243,17 +246,18 @@ async function testRlnSlopeCalculation() {
 async function testRlnSlashingSimulation() {
     RLN.setHasher('poseidon');
     const identity = RLN.genIdentity();
+    const privateKey = identity.keypair.privKey;
 
     const leafIndex = 3;
     const idCommitments: Array<any> = [];
 
     for (let i=0; i<leafIndex;i++) {
       const tmpIdentity = OrdinarySemaphore.genIdentity();
-      const tmpCommitment: any = RLN.genIdentityCommitment(tmpIdentity);
+      const tmpCommitment: any = RLN.genIdentityCommitment(identity.keypair.privKey);
       idCommitments.push(tmpCommitment);
     }
 
-    idCommitments.push(RLN.genIdentityCommitment(identity))
+    idCommitments.push(RLN.genIdentityCommitment(privateKey))
 
     const signal = 'hey hey';
     const x1: bigint = OrdinarySemaphore.genSignalHash(signal);
@@ -265,10 +269,10 @@ async function testRlnSlashingSimulation() {
     const wasmFilePath: string = path.join('./rln-zkeyFiles', 'rln.wasm');
     const finalZkeyPath: string = path.join('./rln-zkeyFiles', 'rln_final.zkey');
 
-    const witnessData: IWitnessData = await RLN.genProofFromIdentityCommitments(identity, epoch, signal, wasmFilePath, finalZkeyPath, idCommitments, 15, BigInt(0), 2);
+    const witnessData: IWitnessData = await RLN.genProofFromIdentityCommitments(privateKey, epoch, signal, wasmFilePath, finalZkeyPath, idCommitments, 15, BigInt(0), 2);
 
-    const a1 = RLN.calculateA1(identity, epoch);
-    const y1 = RLN.calculateY(a1, identity, x1);
+    const a1 = RLN.calculateA1(privateKey, epoch);
+    const y1 = RLN.calculateY(a1, privateKey, x1);
     const nullifier = RLN.genNullifier(a1);
 
     const pubSignals = [y1, witnessData.root, nullifier, x1, epoch];
@@ -284,10 +288,10 @@ async function testRlnSlashingSimulation() {
     const signalSpam = "let's try spamming";
     const x2: bigint = OrdinarySemaphore.genSignalHash(signalSpam);
 
-    const witnessDataSpam: IWitnessData = await RLN.genProofFromIdentityCommitments(identity, epoch, signalSpam, wasmFilePath, finalZkeyPath, idCommitments, 15, BigInt(0), 2);
+    const witnessDataSpam: IWitnessData = await RLN.genProofFromIdentityCommitments(privateKey, epoch, signalSpam, wasmFilePath, finalZkeyPath, idCommitments, 15, BigInt(0), 2);
 
-    const a1Spam = RLN.calculateA1(identity, epoch);
-    const y2 = RLN.calculateY(a1Spam, identity, x2);
+    const a1Spam = RLN.calculateA1(privateKey, epoch);
+    const y2 = RLN.calculateY(a1Spam, privateKey, x2);
     const nullifierSpam = RLN.genNullifier(a1Spam);
 
     const pubSignalsSpam = [y2, witnessDataSpam.root, nullifierSpam, x2, epoch];
@@ -300,7 +304,7 @@ async function testRlnSlashingSimulation() {
         return;
     }
 
-    const identitySecret = RLN.calculateIdentitySecret(identity);
+    const identitySecret = RLN.calculateIdentitySecret(privateKey);
 
     if(Fq.eq(identitySecret, RLN.retrievePrivateKey(x1, x2, y1, y2))) {
         console.log("PK successfully reconstructed");
@@ -336,13 +340,13 @@ async function testFieldArithmetic() {
 
 
 (async () => {
-    await testFastSemaphore();
-    await testOrdinarySemaphore();
-    await testOxSemaphore();
-    await testOxContractState();
+    // await testFastSemaphore();
+    // await testOrdinarySemaphore();
+    // await testOxSemaphore();
+    // await testOxContractState();
     await testRLN();
     await testRlnSlopeCalculation();
-    await testFieldArithmetic();
+    // await testFieldArithmetic();
     await testRlnSlashingSimulation();
     process.exit(0);
 })();
