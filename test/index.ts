@@ -340,13 +340,13 @@ async function testFieldArithmetic() {
 
 
 (async () => {
-    // await testFastSemaphore();
-    // await testOrdinarySemaphore();
-    // await testOxSemaphore();
-    // await testOxContractState();
+    await testFastSemaphore();
+    await testOrdinarySemaphore();
+    await testOxSemaphore();
+    await testOxContractState();
     await testRLN();
     await testRlnSlopeCalculation();
-    // await testFieldArithmetic();
+    await testFieldArithmetic();
     await testRlnSlashingSimulation();
     process.exit(0);
 })();
