@@ -6,6 +6,7 @@ import { IWitnessData } from '../src/types';
 import * as bigintConversion from 'bigint-conversion';
 
 const snarkjs = require('snarkjs');
+import * as circomlib from 'circomlib';
 
 const SNARK_FIELD_SIZE: bigint = BigInt("21888242871839275222246405745257275088548364400416034343698204186575808495617");
 const ZqField = require('ffjavascript').ZqField;
@@ -342,18 +343,70 @@ async function testFieldArithmetic() {
     const retrievedN = Fq.sub(y1, Fq.mul(x1, slope));
 
     console.log(Fq.eq(n, retrievedN));
+}
 
+async function testFairDistributionCircuits() {
+    RLN.setHasher('poseidon');
+    const identity = RLN.genIdentity();
+    const privateKey = identity.keypair.privKey;
+
+    const leafIndex = 3;
+    const idCommitments: Array<any> = [];
+
+    for (let i=0; i<leafIndex;i++) {
+      const tmpIdentity = OrdinarySemaphore.genIdentity();
+      const tmpCommitment: any = RLN.genIdentityCommitment(tmpIdentity.keypair.privKey);
+      idCommitments.push(tmpCommitment);
+    }
+
+    idCommitments.push(RLN.genIdentityCommitment(privateKey))
+
+    const note_secret = Fq.random();
+    const note_nullifier = Fq.random();
+    const note_commitment = circomlib.poseidon([note_secret, note_nullifier]);
+
+    const signal = bigintConversion.bigintToText(note_commitment);
+    const signalHash: bigint = OrdinarySemaphore.genSignalHash(signal);
+    const epoch: string = OrdinarySemaphore.genExternalNullifier('test-epoch');
+
+    const vkeyPath: string = path.join('./fair-zkeyFiles', 'deposit', 'verification_key.json');
+    const vKey = JSON.parse(fs.readFileSync(vkeyPath, 'utf-8'));
+
+    const wasmFilePath: string = path.join('./fair-zkeyFiles', 'deposit', 'deposit.wasm');
+    const finalZkeyPath: string = path.join('./fair-zkeyFiles', 'deposit', 'deposit_final.zkey');
+
+    const witnessData: IWitnessData = await RLN.genProofFromIdentityCommitments(privateKey, epoch, signal, wasmFilePath, finalZkeyPath, idCommitments, 20, BigInt(0), 2);
+
+    const a1 = RLN.calculateA1(privateKey, epoch);
+    const y = RLN.calculateY(a1, privateKey, signalHash);
+    const nullifier = RLN.genNullifier(a1);
+
+    const pubSignals = [y, witnessData.root, nullifier, signalHash, epoch];
+
+    const res = await RLN.verifyProof(vKey, { proof: witnessData.fullProof.proof, publicSignals: pubSignals })
+    if (res === true) {
+        console.log("Verification OK");
+    } else {
+        console.log("Invalid proof");
+    }
+
+    const notesTree = OrdinarySemaphore.createTree(20, BigInt(0), 2);
+    // if verification was ok, add note_commitment to tree
+    if(res === true) {
+        notesTree.insert(note_commitment);
+    }
 }
 
 
 (async () => {
-    await testFastSemaphore();
-    await testOrdinarySemaphore();
-    await testOxSemaphore();
-    await testOxContractState();
-    await testRLN();
-    await testRlnSlopeCalculation();
-    await testFieldArithmetic();
-    await testRlnSlashingSimulation();
+    // await testFastSemaphore();
+    // await testOrdinarySemaphore();
+    // await testOxSemaphore();
+    // await testOxContractState();
+    // await testRLN();
+    // await testRlnSlopeCalculation();
+    // await testFieldArithmetic();
+    // await testRlnSlashingSimulation();
+    await testFairDistributionCircuits();
     process.exit(0);
 })();
