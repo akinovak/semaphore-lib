@@ -1,12 +1,13 @@
 import * as ethers from 'ethers';
-import { FastSemaphore, OrdinarySemaphore, Identity, RLN } from '../src/index';
+import { FastSemaphore, OrdinarySemaphore, Identity, RLN, Withdraw } from '../src/index';
 import * as path from 'path';
 import * as fs from 'fs';
-import { IWitnessData } from '../src/types';
+import { IWitnessData, IProof } from '../src/types';
 import * as bigintConversion from 'bigint-conversion';
 
 const snarkjs = require('snarkjs');
 import * as circomlib from 'circomlib';
+import { poseidonHash } from '../src/common';
 
 const SNARK_FIELD_SIZE: bigint = BigInt("21888242871839275222246405745257275088548364400416034343698204186575808495617");
 const ZqField = require('ffjavascript').ZqField;
@@ -351,43 +352,45 @@ async function testFieldArithmetic() {
 async function testFairDistributionCircuits() {
     RLN.setHasher('poseidon');
     const identity = RLN.genIdentity();
-    const identitySecret = RLN.calculateIdentitySecret(identity);
+    const identitySecret: bigint = RLN.calculateIdentitySecret(identity);
 
     const leafIndex = 3;
     const idCommitments: Array<any> = [];
 
     for (let i=0; i<leafIndex;i++) {
-        const tmpIdentity = OrdinarySemaphore.genIdentity();
-        const tmpSecret: bigint = RLN.calculateIdentitySecret(tmpIdentity);
-        const tmpCommitment: any = RLN.genIdentityCommitment(tmpSecret);
-        idCommitments.push(tmpCommitment);
+      const tmpIdentity = OrdinarySemaphore.genIdentity();
+      const tmpSecret: bigint = RLN.calculateIdentitySecret(tmpIdentity);
+      const tmpCommitment: any = RLN.genIdentityCommitment(tmpSecret);
+      idCommitments.push(tmpCommitment);
     }
 
-    idCommitments.push(RLN.genIdentityCommitment(identitySecret))
+    idCommitments.push(RLN.genIdentityCommitment(identitySecret));
 
-    const note_secret = Fq.random();
-    const note_nullifier = Fq.random();
-    const note_commitment = circomlib.poseidon([note_secret, note_nullifier]);
+    const noteSecret: bigint = Fq.random();
+    const noteNullifier: bigint = Fq.random();
 
-    const signal = bigintConversion.bigintToText(note_commitment);
+    const noteCommitmnet = poseidonHash([noteSecret, noteNullifier]);
+    const noteNullifierHash = Withdraw.genNullifierHash(noteNullifier);
+
+    const signal = bigintConversion.bigintToText(noteCommitmnet);
     const signalHash: bigint = OrdinarySemaphore.genSignalHash(signal);
     const epoch: string = OrdinarySemaphore.genExternalNullifier('test-epoch');
 
     const rlnIdentifier: bigint = RLN.genIdentifier();
 
-    const vkeyPath: string = path.join('./fair-zkeyFiles', 'deposit', 'verification_key.json');
+    const vkeyPath: string = path.join('./rln-zkeyFiles', 'verification_key.json');
     const vKey = JSON.parse(fs.readFileSync(vkeyPath, 'utf-8'));
 
-    const wasmFilePath: string = path.join('./fair-zkeyFiles', 'deposit', 'deposit.wasm');
-    const finalZkeyPath: string = path.join('./fair-zkeyFiles', 'deposit', 'deposit_final.zkey');
+    const wasmFilePath: string = path.join('./rln-zkeyFiles', 'rln.wasm');
+    const finalZkeyPath: string = path.join('./rln-zkeyFiles', 'rln_final.zkey');
 
-    const witnessData: IWitnessData = await RLN.genProofFromIdentityCommitments(identitySecret, epoch, signal, wasmFilePath, finalZkeyPath, idCommitments, 20, BigInt(0), 2, rlnIdentifier);
+    const witnessData: IWitnessData = await RLN.genProofFromIdentityCommitments(identitySecret, epoch, signal, wasmFilePath, finalZkeyPath, idCommitments, 15, BigInt(0), 2, rlnIdentifier);
 
     const a1 = RLN.calculateA1(identitySecret, epoch, rlnIdentifier);
     const y = RLN.calculateY(a1, identitySecret, signalHash);
     const nullifier = RLN.genNullifier(a1, rlnIdentifier);
 
-    const pubSignals = [y, witnessData.root, nullifier, signalHash, epoch];
+    const pubSignals = [y, witnessData.root, nullifier, signalHash, epoch, rlnIdentifier];
 
     const res = await RLN.verifyProof(vKey, { proof: witnessData.fullProof.proof, publicSignals: pubSignals })
     if (res === true) {
@@ -396,23 +399,44 @@ async function testFairDistributionCircuits() {
         console.log("Invalid proof");
     }
 
-    const notesTree = OrdinarySemaphore.createTree(20, BigInt(0), 2);
-    // if verification was ok, add note_commitment to tree
+    const notesTree = RLN.createTree(20, BigInt(0), 2);
+    // if verification was ok, add note_commitment to tree and try to withdraw it
     if(res === true) {
-        notesTree.insert(note_commitment);
+        console.log('DEPOSIT WAS SUCCESSFUL');
+        const withdrawalVkeyPath: string = path.join('./fair-zkeyFiles', 'witdraw', 'verification_key.json');
+        const withdrawalVKey = JSON.parse(fs.readFileSync(withdrawalVkeyPath, 'utf-8'));
+    
+        const withdrawalWasmFilePath: string = path.join('./fair-zkeyFiles', 'witdraw', 'witdraw.wasm');
+        const withdrawalFinalZkeyPath: string = path.join('./fair-zkeyFiles', 'witdraw', 'witdraw_final.zkey');
+
+        notesTree.insert(noteCommitmnet);
+
+        const withdrawalMerkleProof = notesTree.genMerklePath(0);
+        const fullProof: IProof = await Withdraw.genProofFromBuiltTree(noteSecret, noteNullifier, withdrawalMerkleProof, withdrawalWasmFilePath, withdrawalFinalZkeyPath);
+
+        const pubSignals = [notesTree.root, noteNullifierHash];
+
+
+        const withdrawalRes = await Withdraw.verifyProof(withdrawalVKey, { proof: fullProof.proof, publicSignals: pubSignals })
+        if (withdrawalRes === true) {
+            console.log("Withdrawal verification OK");
+        } else {
+            console.log("Withdrawal invalid proof");
+        }
+
     }
 }
 
 
 (async () => {
-    await testFastSemaphore();
-    await testOrdinarySemaphore();
-    await testOxSemaphore();
-    await testOxContractState();
-    await testRLN();
-    await testRlnSlopeCalculation();
-    await testFieldArithmetic();
-    await testRlnSlashingSimulation();
-    // await testFairDistributionCircuits();
+    // await testFastSemaphore();
+    // await testOrdinarySemaphore();
+    // await testOxSemaphore();
+    // await testOxContractState();
+    // await testRLN();
+    // await testRlnSlopeCalculation();
+    // await testFieldArithmetic();
+    // await testRlnSlashingSimulation();
+    await testFairDistributionCircuits();
     process.exit(0);
 })();
