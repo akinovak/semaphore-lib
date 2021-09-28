@@ -200,19 +200,21 @@ async function testRLN() {
     const signalHash: bigint = OrdinarySemaphore.genSignalHash(signal);
     const epoch: string = OrdinarySemaphore.genExternalNullifier('test-epoch');
 
+    const rlnIdentifier: bigint = RLN.genIdentifier();
+
     const vkeyPath: string = path.join('./rln-zkeyFiles', 'verification_key.json');
     const vKey = JSON.parse(fs.readFileSync(vkeyPath, 'utf-8'));
 
     const wasmFilePath: string = path.join('./rln-zkeyFiles', 'rln.wasm');
     const finalZkeyPath: string = path.join('./rln-zkeyFiles', 'rln_final.zkey');
 
-    const witnessData: IWitnessData = await RLN.genProofFromIdentityCommitments(privateKey, epoch, signal, wasmFilePath, finalZkeyPath, idCommitments, 15, BigInt(0), 2);
+    const witnessData: IWitnessData = await RLN.genProofFromIdentityCommitments(privateKey, epoch, signal, wasmFilePath, finalZkeyPath, idCommitments, 15, BigInt(0), 2, rlnIdentifier);
 
-    const a1 = RLN.calculateA1(privateKey, epoch);
+    const a1 = RLN.calculateA1(privateKey, epoch, rlnIdentifier);
     const y = RLN.calculateY(a1, privateKey, signalHash);
-    const nullifier = RLN.genNullifier(a1);
+    const nullifier = RLN.genNullifier(a1, rlnIdentifier);
 
-    const pubSignals = [y, witnessData.root, nullifier, signalHash, epoch];
+    const pubSignals = [y, witnessData.root, nullifier, signalHash, epoch, rlnIdentifier];
 
     const res = await RLN.verifyProof(vKey, { proof: witnessData.fullProof.proof, publicSignals: pubSignals })
     if (res === true) {
@@ -233,13 +235,15 @@ async function testRlnSlopeCalculation() {
     const x1: bigint = OrdinarySemaphore.genSignalHash(signal1);
     const epoch: string = OrdinarySemaphore.genExternalNullifier('test-epoch');
 
-    const a1 = RLN.calculateA1(privateKey, epoch);
+    const rlnIdentifier: bigint = RLN.genIdentifier();
+
+    const a1 = RLN.calculateA1(privateKey, epoch, rlnIdentifier);
     const y1 = RLN.calculateY(a1, privateKey, x1);
 
     const signal2 = 'hey hey once again';
     const x2: bigint = OrdinarySemaphore.genSignalHash(signal2);
 
-    const a2 = RLN.calculateA1(privateKey, epoch);
+    const a2 = RLN.calculateA1(privateKey, epoch, rlnIdentifier);
     const y2 = RLN.calculateY(a2, privateKey, x2);
 
     const retreivedPkey = bigintConversion.bufToBigint(RLN.retrievePrivateKey(x1, x2, y1, y2))
@@ -268,19 +272,21 @@ async function testRlnSlashingSimulation() {
     const x1: bigint = OrdinarySemaphore.genSignalHash(signal);
     const epoch: string = OrdinarySemaphore.genExternalNullifier('test-epoch');
 
+    const rlnIdentifier = RLN.genIdentifier();
+
     const vkeyPath: string = path.join('./rln-zkeyFiles', 'verification_key.json');
     const vKey = JSON.parse(fs.readFileSync(vkeyPath, 'utf-8'));
 
     const wasmFilePath: string = path.join('./rln-zkeyFiles', 'rln.wasm');
     const finalZkeyPath: string = path.join('./rln-zkeyFiles', 'rln_final.zkey');
 
-    const witnessData: IWitnessData = await RLN.genProofFromIdentityCommitments(privateKey, epoch, signal, wasmFilePath, finalZkeyPath, idCommitments, 15, BigInt(0), 2);
+    const witnessData: IWitnessData = await RLN.genProofFromIdentityCommitments(privateKey, epoch, signal, wasmFilePath, finalZkeyPath, idCommitments, 15, BigInt(0), 2, rlnIdentifier);
 
-    const a1 = RLN.calculateA1(privateKey, epoch);
+    const a1 = RLN.calculateA1(privateKey, epoch, rlnIdentifier);
     const y1 = RLN.calculateY(a1, privateKey, x1);
-    const nullifier = RLN.genNullifier(a1);
+    const nullifier = RLN.genNullifier(a1, rlnIdentifier);
 
-    const pubSignals = [y1, witnessData.root, nullifier, x1, epoch];
+    const pubSignals = [y1, witnessData.root, nullifier, x1, epoch, rlnIdentifier];
 
     let res = await RLN.verifyProof(vKey, { proof: witnessData.fullProof.proof, publicSignals: pubSignals })
     if (res === true) {
@@ -293,13 +299,13 @@ async function testRlnSlashingSimulation() {
     const signalSpam = "let's try spamming";
     const x2: bigint = OrdinarySemaphore.genSignalHash(signalSpam);
 
-    const witnessDataSpam: IWitnessData = await RLN.genProofFromIdentityCommitments(privateKey, epoch, signalSpam, wasmFilePath, finalZkeyPath, idCommitments, 15, BigInt(0), 2);
+    const witnessDataSpam: IWitnessData = await RLN.genProofFromIdentityCommitments(privateKey, epoch, signalSpam, wasmFilePath, finalZkeyPath, idCommitments, 15, BigInt(0), 2, rlnIdentifier);
 
-    const a1Spam = RLN.calculateA1(privateKey, epoch);
+    const a1Spam = RLN.calculateA1(privateKey, epoch, rlnIdentifier);
     const y2 = RLN.calculateY(a1Spam, privateKey, x2);
-    const nullifierSpam = RLN.genNullifier(a1Spam);
+    const nullifierSpam = RLN.genNullifier(a1Spam, rlnIdentifier);
 
-    const pubSignalsSpam = [y2, witnessDataSpam.root, nullifierSpam, x2, epoch];
+    const pubSignalsSpam = [y2, witnessDataSpam.root, nullifierSpam, x2, epoch, rlnIdentifier];
 
     res = await RLN.verifyProof(vKey, { proof: witnessDataSpam.fullProof.proof, publicSignals: pubSignalsSpam })
     if (res === true) {
@@ -369,17 +375,19 @@ async function testFairDistributionCircuits() {
     const signalHash: bigint = OrdinarySemaphore.genSignalHash(signal);
     const epoch: string = OrdinarySemaphore.genExternalNullifier('test-epoch');
 
+    const rlnIdentifier: bigint = RLN.genIdentifier();
+
     const vkeyPath: string = path.join('./fair-zkeyFiles', 'deposit', 'verification_key.json');
     const vKey = JSON.parse(fs.readFileSync(vkeyPath, 'utf-8'));
 
     const wasmFilePath: string = path.join('./fair-zkeyFiles', 'deposit', 'deposit.wasm');
     const finalZkeyPath: string = path.join('./fair-zkeyFiles', 'deposit', 'deposit_final.zkey');
 
-    const witnessData: IWitnessData = await RLN.genProofFromIdentityCommitments(privateKey, epoch, signal, wasmFilePath, finalZkeyPath, idCommitments, 20, BigInt(0), 2);
+    const witnessData: IWitnessData = await RLN.genProofFromIdentityCommitments(privateKey, epoch, signal, wasmFilePath, finalZkeyPath, idCommitments, 20, BigInt(0), 2, rlnIdentifier);
 
-    const a1 = RLN.calculateA1(privateKey, epoch);
+    const a1 = RLN.calculateA1(privateKey, epoch, rlnIdentifier);
     const y = RLN.calculateY(a1, privateKey, signalHash);
-    const nullifier = RLN.genNullifier(a1);
+    const nullifier = RLN.genNullifier(a1, rlnIdentifier);
 
     const pubSignals = [y, witnessData.root, nullifier, signalHash, epoch];
 
@@ -399,14 +407,14 @@ async function testFairDistributionCircuits() {
 
 
 (async () => {
-    // await testFastSemaphore();
-    // await testOrdinarySemaphore();
-    // await testOxSemaphore();
-    // await testOxContractState();
-    // await testRLN();
-    // await testRlnSlopeCalculation();
-    // await testFieldArithmetic();
-    // await testRlnSlashingSimulation();
-    await testFairDistributionCircuits();
+    await testFastSemaphore();
+    await testOrdinarySemaphore();
+    await testOxSemaphore();
+    await testOxContractState();
+    await testRLN();
+    await testRlnSlopeCalculation();
+    await testFieldArithmetic();
+    await testRlnSlashingSimulation();
+    // await testFairDistributionCircuits();
     process.exit(0);
 })();

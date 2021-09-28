@@ -14,9 +14,9 @@ class RLN extends BaseSemaphore {
         return Fq.normalize(identitySecret);
     }
 
-    calculateA1(privateKey: Buffer, epoch: string) {
+    calculateA1(privateKey: Buffer, epoch: string, rlnIdentifier: bigint) {
         const identitySecret: bigint = this.calculateIdentitySecret(privateKey);
-        return poseidonHash([identitySecret, BigInt(epoch)])
+        return poseidonHash([identitySecret, BigInt(epoch), rlnIdentifier])
     }
     
     calculateY(a1:bigint, privateKey: Buffer, signalHash: bigint): bigint {
@@ -24,8 +24,8 @@ class RLN extends BaseSemaphore {
         return Fq.normalize(a1 * signalHash + identitySecret);
     }
 
-    genNullifier(a1: bigint): bigint {
-        return poseidonHash([a1]);
+    genNullifier(a1: bigint, rlnIdentifier: bigint): bigint {
+        return poseidonHash([a1, rlnIdentifier]);
     }
 
     retrievePrivateKey(x1: bigint, x2:bigint, y1:bigint, y2:bigint): Buffer | ArrayBuffer {
@@ -41,6 +41,10 @@ class RLN extends BaseSemaphore {
         return this.commitmentHasher(data);
     }
 
+    genIdentifier(): bigint {
+        return Fq.random();
+    }
+
 
     async genProofFromIdentityCommitments(privateKey: Buffer, 
         epoch: string | bigint, 
@@ -49,7 +53,8 @@ class RLN extends BaseSemaphore {
         finalZkeyPath: string, 
         identityCommitments: Array<BigInt>, 
         depth: number, zeroValue: BigInt, 
-        leavesPerNode: number): Promise<IWitnessData> {
+        leavesPerNode: number, 
+        rlnIdentifier: bigint): Promise<IWitnessData> {
 
         const tree: IncrementalQuinTree = new Tree.IncrementalQuinTree(depth, zeroValue, leavesPerNode, poseidonHash);
         const identityCommitment: BigInt = this.genIdentityCommitment(privateKey);
@@ -62,7 +67,7 @@ class RLN extends BaseSemaphore {
 
         const merkleProof = tree.genMerklePath(leafIndex);
         
-        const fullProof: IProof = await this.genProofFromBuiltTree(privateKey, merkleProof, epoch, signal, wasmFilePath, finalZkeyPath);
+        const fullProof: IProof = await this.genProofFromBuiltTree(privateKey, merkleProof, epoch, signal, rlnIdentifier, wasmFilePath, finalZkeyPath);
         return {
             fullProof, 
             root: tree.root
@@ -70,7 +75,7 @@ class RLN extends BaseSemaphore {
     }
 
     //sometimes identityCommitments array can be to big so we must generate it on server and just use it on frontend
-    async genProofFromBuiltTree(privateKey: Buffer, merkleProof: any, epoch: string | bigint, signal: string, 
+    async genProofFromBuiltTree(privateKey: Buffer, merkleProof: any, epoch: string | bigint, signal: string, rlnIdentifier: bigint,
         wasmFilePath: string, finalZkeyPath: string): Promise<IProof> {
 
             const identitySecret: bigint = this.calculateIdentitySecret(privateKey);
@@ -81,6 +86,7 @@ class RLN extends BaseSemaphore {
                 identity_path_index: merkleProof.indices,
                 epoch,
                 x: this.genSignalHash(signal),
+                rln_identifier: rlnIdentifier,
             }
 
         return groth16.fullProve(grothInput, wasmFilePath, finalZkeyPath);
