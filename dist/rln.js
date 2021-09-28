@@ -55,7 +55,6 @@ var groth16 = require('snarkjs').groth16;
 var base_1 = require("./base");
 var common_1 = require("./common");
 var Tree = require('incrementalquintree/build/IncrementalQuinTree');
-var bigintConversion = require("bigint-conversion");
 var ZqField = require('ffjavascript').ZqField;
 var Fq = new ZqField(common_1.SNARK_FIELD_SIZE);
 var RLN = /** @class */ (function (_super) {
@@ -63,41 +62,40 @@ var RLN = /** @class */ (function (_super) {
     function RLN() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
-    RLN.prototype.calculateIdentitySecret = function (privateKey) {
-        var identitySecret = bigintConversion.bufToBigint(privateKey);
-        return Fq.normalize(identitySecret);
+    RLN.prototype.calculateIdentitySecret = function (identity) {
+        return (0, common_1.poseidonHash)([identity.identityTrapdoor, identity.identityNullifier]);
     };
-    RLN.prototype.calculateA1 = function (privateKey, epoch) {
-        var identitySecret = this.calculateIdentitySecret(privateKey);
-        return (0, common_1.poseidonHash)([identitySecret, BigInt(epoch)]);
+    RLN.prototype.calculateA1 = function (identitySecret, epoch, rlnIdentifier) {
+        return (0, common_1.poseidonHash)([identitySecret, BigInt(epoch), rlnIdentifier]);
     };
-    RLN.prototype.calculateY = function (a1, privateKey, signalHash) {
-        var identitySecret = this.calculateIdentitySecret(privateKey);
+    RLN.prototype.calculateY = function (a1, identitySecret, signalHash) {
         return Fq.normalize(a1 * signalHash + identitySecret);
     };
-    RLN.prototype.genNullifier = function (a1) {
-        return (0, common_1.poseidonHash)([a1]);
+    RLN.prototype.genNullifier = function (a1, rlnIdentifier) {
+        return (0, common_1.poseidonHash)([a1, rlnIdentifier]);
     };
     RLN.prototype.retrievePrivateKey = function (x1, x2, y1, y2) {
         var slope = Fq.div(Fq.sub(y2, y1), Fq.sub(x2, x1));
         var privateKey = Fq.sub(y1, Fq.mul(slope, x1));
-        return bigintConversion.bigintToBuf(Fq.normalize(privateKey));
+        return Fq.normalize(privateKey);
     };
-    RLN.prototype.genIdentityCommitment = function (privateKey) {
+    RLN.prototype.genIdentityCommitment = function (identitySecret) {
         if (!this.commitmentHasher)
             throw new Error('Hasher not set');
-        var identitySecret = this.calculateIdentitySecret(privateKey);
         var data = [identitySecret];
         return this.commitmentHasher(data);
     };
-    RLN.prototype.genProofFromIdentityCommitments = function (privateKey, epoch, signal, wasmFilePath, finalZkeyPath, identityCommitments, depth, zeroValue, leavesPerNode) {
+    RLN.prototype.genIdentifier = function () {
+        return Fq.random();
+    };
+    RLN.prototype.genProofFromIdentityCommitments = function (identitySecret, epoch, signal, wasmFilePath, finalZkeyPath, identityCommitments, depth, zeroValue, leavesPerNode, rlnIdentifier) {
         return __awaiter(this, void 0, void 0, function () {
             var tree, identityCommitment, leafIndex, _i, identityCommitments_1, identityCommitment_1, merkleProof, fullProof;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
                         tree = new Tree.IncrementalQuinTree(depth, zeroValue, leavesPerNode, common_1.poseidonHash);
-                        identityCommitment = this.genIdentityCommitment(privateKey);
+                        identityCommitment = this.genIdentityCommitment(identitySecret);
                         leafIndex = identityCommitments.indexOf(identityCommitment);
                         if (leafIndex === -1)
                             throw new Error('This commitment is not registered');
@@ -106,7 +104,7 @@ var RLN = /** @class */ (function (_super) {
                             tree.insert(identityCommitment_1);
                         }
                         merkleProof = tree.genMerklePath(leafIndex);
-                        return [4 /*yield*/, this.genProofFromBuiltTree(privateKey, merkleProof, epoch, signal, wasmFilePath, finalZkeyPath)];
+                        return [4 /*yield*/, this.genProofFromBuiltTree(identitySecret, merkleProof, epoch, signal, rlnIdentifier, wasmFilePath, finalZkeyPath)];
                     case 1:
                         fullProof = _a.sent();
                         return [2 /*return*/, {
@@ -118,17 +116,17 @@ var RLN = /** @class */ (function (_super) {
         });
     };
     //sometimes identityCommitments array can be to big so we must generate it on server and just use it on frontend
-    RLN.prototype.genProofFromBuiltTree = function (privateKey, merkleProof, epoch, signal, wasmFilePath, finalZkeyPath) {
+    RLN.prototype.genProofFromBuiltTree = function (identitySecret, merkleProof, epoch, signal, rlnIdentifier, wasmFilePath, finalZkeyPath) {
         return __awaiter(this, void 0, void 0, function () {
-            var identitySecret, grothInput;
+            var grothInput;
             return __generator(this, function (_a) {
-                identitySecret = this.calculateIdentitySecret(privateKey);
                 grothInput = {
                     identity_secret: identitySecret,
                     path_elements: merkleProof.pathElements,
                     identity_path_index: merkleProof.indices,
                     epoch: epoch,
                     x: this.genSignalHash(signal),
+                    rln_identifier: rlnIdentifier,
                 };
                 return [2 /*return*/, groth16.fullProve(grothInput, wasmFilePath, finalZkeyPath)];
             });
