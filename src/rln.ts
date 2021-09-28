@@ -8,19 +8,15 @@ const ZqField = require('ffjavascript').ZqField;
 const Fq = new ZqField(SNARK_FIELD_SIZE);
 
 class RLN extends BaseSemaphore {
-
-    calculateIdentitySecret(privateKey: Buffer): bigint {
-        const identitySecret: bigint = bigintConversion.bufToBigint(privateKey); 
-        return Fq.normalize(identitySecret);
+    calculateIdentitySecret(identity: Identity): bigint {
+        return poseidonHash([identity.identityTrapdoor, identity.identityNullifier]);
     }
 
-    calculateA1(privateKey: Buffer, epoch: string, rlnIdentifier: bigint) {
-        const identitySecret: bigint = this.calculateIdentitySecret(privateKey);
+    calculateA1(identitySecret: bigint, epoch: string, rlnIdentifier: bigint) {
         return poseidonHash([identitySecret, BigInt(epoch), rlnIdentifier])
     }
     
-    calculateY(a1:bigint, privateKey: Buffer, signalHash: bigint): bigint {
-        const identitySecret: bigint = this.calculateIdentitySecret(privateKey);
+    calculateY(a1:bigint, identitySecret: bigint, signalHash: bigint): bigint {
         return Fq.normalize(a1 * signalHash + identitySecret);
     }
 
@@ -28,15 +24,14 @@ class RLN extends BaseSemaphore {
         return poseidonHash([a1, rlnIdentifier]);
     }
 
-    retrievePrivateKey(x1: bigint, x2:bigint, y1:bigint, y2:bigint): Buffer | ArrayBuffer {
+    retrievePrivateKey(x1: bigint, x2:bigint, y1:bigint, y2:bigint): bigint {
         const slope = Fq.div(Fq.sub(y2, y1), Fq.sub(x2, x1))
         const privateKey = Fq.sub(y1, Fq.mul(slope, x1));
-        return bigintConversion.bigintToBuf(Fq.normalize(privateKey));
+        return Fq.normalize(privateKey);
     }
 
-    genIdentityCommitment(privateKey: Buffer): bigint {
+    genIdentityCommitment(identitySecret: bigint): bigint {
         if(!this.commitmentHasher) throw new Error('Hasher not set');
-        const identitySecret: bigint = this.calculateIdentitySecret(privateKey);
         const data = [identitySecret];
         return this.commitmentHasher(data);
     }
@@ -46,7 +41,7 @@ class RLN extends BaseSemaphore {
     }
 
 
-    async genProofFromIdentityCommitments(privateKey: Buffer, 
+    async genProofFromIdentityCommitments(identitySecret: bigint, 
         epoch: string | bigint, 
         signal: string, 
         wasmFilePath: string, 
@@ -57,7 +52,7 @@ class RLN extends BaseSemaphore {
         rlnIdentifier: bigint): Promise<IWitnessData> {
 
         const tree: IncrementalQuinTree = new Tree.IncrementalQuinTree(depth, zeroValue, leavesPerNode, poseidonHash);
-        const identityCommitment: BigInt = this.genIdentityCommitment(privateKey);
+        const identityCommitment: BigInt = this.genIdentityCommitment(identitySecret);
         const leafIndex = identityCommitments.indexOf(identityCommitment);
         if(leafIndex === -1) throw new Error('This commitment is not registered');
         
@@ -67,7 +62,7 @@ class RLN extends BaseSemaphore {
 
         const merkleProof = tree.genMerklePath(leafIndex);
         
-        const fullProof: IProof = await this.genProofFromBuiltTree(privateKey, merkleProof, epoch, signal, rlnIdentifier, wasmFilePath, finalZkeyPath);
+        const fullProof: IProof = await this.genProofFromBuiltTree(identitySecret, merkleProof, epoch, signal, rlnIdentifier, wasmFilePath, finalZkeyPath);
         return {
             fullProof, 
             root: tree.root
@@ -75,10 +70,8 @@ class RLN extends BaseSemaphore {
     }
 
     //sometimes identityCommitments array can be to big so we must generate it on server and just use it on frontend
-    async genProofFromBuiltTree(privateKey: Buffer, merkleProof: any, epoch: string | bigint, signal: string, rlnIdentifier: bigint,
+    async genProofFromBuiltTree(identitySecret: bigint, merkleProof: any, epoch: string | bigint, signal: string, rlnIdentifier: bigint,
         wasmFilePath: string, finalZkeyPath: string): Promise<IProof> {
-
-            const identitySecret: bigint = this.calculateIdentitySecret(privateKey);
 
             const grothInput: any = {
                 identity_secret: identitySecret,
