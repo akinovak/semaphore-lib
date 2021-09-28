@@ -405,11 +405,11 @@ async function testFairDistributionCircuits() {
 
 
 (async () => {
-    // await testFastSemaphore();
-    // await testOrdinarySemaphore();
-    // await testOxSemaphore();
-    // await testOxContractState();
-    // await testRLN();
+    await testFastSemaphore();
+    await testOrdinarySemaphore();
+    await testOxSemaphore();
+    await testOxContractState();
+    await testRLN();
     await testRlnSlopeCalculation();
     await testFieldArithmetic();
     await testRlnSlashingSimulation();
