@@ -39,14 +39,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var groth16 = require('snarkjs').groth16;
 var common_1 = require("./common");
 var Tree = require('incrementalquintree/build/IncrementalQuinTree');
-var Witdraw = /** @class */ (function () {
-    function Witdraw() {
+var Withdraw = /** @class */ (function () {
+    function Withdraw() {
         this.genNullifierHash = function (nullifier) {
             return (0, common_1.poseidonHash)([nullifier]);
         };
     }
     //sometimes identityCommitments array can be to big so we must generate it on server and just use it on frontend
-    Witdraw.prototype.genProofFromBuiltTree = function (noteSecret, nullifier, merkleProof, wasmFilePath, finalZkeyPath) {
+    Withdraw.prototype.genProofFromBuiltTree = function (noteSecret, nullifier, merkleProof, wasmFilePath, finalZkeyPath) {
         return __awaiter(this, void 0, void 0, function () {
             var grothInput;
             return __generator(this, function (_a) {
@@ -54,13 +54,18 @@ var Witdraw = /** @class */ (function () {
                     note_secret: noteSecret,
                     nullifier: nullifier,
                     path_elements: merkleProof.pathElements,
-                    path_indices: merkleProof.indices,
+                    path_indices: merkleProof.indices
                 };
+                // console.log('uso sam ovde', grothInput);
                 return [2 /*return*/, groth16.fullProve(grothInput, wasmFilePath, finalZkeyPath)];
             });
         });
     };
-    return Witdraw;
+    Withdraw.prototype.verifyProof = function (vKey, fullProof) {
+        var proof = fullProof.proof, publicSignals = fullProof.publicSignals;
+        return groth16.verify(vKey, publicSignals, proof);
+    };
+    return Withdraw;
 }());
-exports.default = new Witdraw();
-//# sourceMappingURL=witdraw.js.map
+exports.default = new Withdraw();
+//# sourceMappingURL=withdraw.js.map
