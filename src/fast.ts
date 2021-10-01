@@ -5,10 +5,17 @@ import { Identity, IncrementalQuinTree, IProof, IWitnessData } from './types';
 const Tree = require('incrementalquintree/build/IncrementalQuinTree');
 
 class FastSemaphore extends BaseSemaphore {
+
+    genSecret(identity: Identity): bigint {
+        if(!this.commitmentHasher) throw new Error('Hasher not set');
+        const secret = [identity.identityNullifier, identity.identityTrapdoor];
+        return this.commitmentHasher(secret);
+    }
+
     genIdentityCommitment(identity: Identity): bigint {
         if(!this.commitmentHasher) throw new Error('Hasher not set');
-        const data = [identity.identityNullifier, identity.identityTrapdoor];
-        return this.commitmentHasher(data);
+        const secret = [this.genSecret(identity)];
+        return this.commitmentHasher(secret);
     }
 
     async genProofFromIdentityCommitments(identity: Identity, 
@@ -48,7 +55,7 @@ class FastSemaphore extends BaseSemaphore {
             identity_path_index: merkleProof.indices,
             path_elements: merkleProof.pathElements,
             external_nullifier: externalNullifier,
-            signal_hash: this.genSignalHash(signal),
+            signal_hash: this.genSignalHash(signal)
         }
 
         return groth16.fullProve(grothInput, wasmFilePath, finalZkeyPath);

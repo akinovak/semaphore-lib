@@ -530,7 +530,7 @@ async function testFairDistributionCircuits() {
 
 
 (async () => {
-    // await testFastSemaphore();
+    await testFastSemaphore();
     // await testOrdinarySemaphore();
     // await testOxSemaphore();
     // await testOxContractState();
@@ -540,7 +540,7 @@ async function testFairDistributionCircuits() {
     // await testRlnSlashingSimulation();
     // await testFairDistributionCircuits();
     // await testGeneralizedRLN();
-    await testGeneralizedRLNSlashing();
+    // await testGeneralizedRLNSlashing();
     // await lagrangeOverFq();
     process.exit(0);
 })();
