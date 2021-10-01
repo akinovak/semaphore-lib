@@ -1,5 +1,5 @@
 import * as ethers from 'ethers';
-import { FastSemaphore, OrdinarySemaphore, Identity, RLN, Withdraw } from '../src/index';
+import { FastSemaphore, OrdinarySemaphore, Identity, RLN, NRLN, Withdraw } from '../src/index';
 import * as path from 'path';
 import * as fs from 'fs';
 import { IWitnessData, IProof } from '../src/types';
@@ -224,6 +224,66 @@ async function testRLN() {
     } else {
         console.log("Invalid proof");
     }
+}
+
+async function testGeneralizedRLN() {
+    NRLN.setHasher('poseidon');
+    const limit = 1;
+    const identitySecret: Array<bigint> = NRLN.genIdentitySecrets(limit);
+
+    const leafIndex = 3;
+    const idCommitments: Array<any> = [];
+
+    for (let i=0; i<leafIndex;i++) {
+      const tmpIdentity = NRLN.genIdentitySecrets(limit);
+      const tmpCommitment: any = NRLN.genIdentityCommitment(tmpIdentity);
+      idCommitments.push(tmpCommitment);
+    }
+
+    idCommitments.push(NRLN.genIdentityCommitment(identitySecret));
+
+    const signal = 'hey hey';
+    const signalHash: bigint = NRLN.genSignalHash(signal);
+    const epoch: string = NRLN.genExternalNullifier('test-epoch');
+
+    // const rlnIdentifier: bigint = RLN.genIdentifier();
+
+    const vkeyPath: string = path.join('./g-rln-zkeyFiles', 'verification_key.json');
+    const vKey = JSON.parse(fs.readFileSync(vkeyPath, 'utf-8'));
+
+    const wasmFilePath: string = path.join('./g-rln-zkeyFiles', 'rln.wasm');
+    const finalZkeyPath: string = path.join('./g-rln-zkeyFiles', 'rln_final.zkey');
+
+    const witnessData: IWitnessData = await NRLN.genProofFromIdentityCommitments(identitySecret, epoch, signal, wasmFilePath, finalZkeyPath, idCommitments, 15, BigInt(0), 2);
+
+    const [y, nullifier] = NRLN.calculateOutput(identitySecret, bigintConversion.hexToBigint(epoch.slice(2)), signalHash, limit);
+    const pubSignals = [y, witnessData.root, nullifier, signalHash, epoch];
+
+    const res = await RLN.verifyProof(vKey, { proof: witnessData.fullProof.proof, publicSignals: pubSignals })
+    if (res === true) {
+        console.log("Verification OK");
+    } else {
+        console.log("Invalid proof");
+    }
+}
+
+async function testGeneralizedRLNSlashing() {
+    NRLN.setHasher('poseidon');
+    const limit = 1;
+    const identitySecret: Array<bigint> = NRLN.genIdentitySecrets(limit);
+    const secret = poseidonHash(identitySecret);
+    const epoch: string = NRLN.genExternalNullifier('test-slashing');
+
+
+    const x1 = Fq.random();
+    const [y1, nullifier1] = NRLN.calculateOutput(identitySecret, bigintConversion.hexToBigint(epoch.slice(2)), x1, limit);
+
+    const x2 = Fq.random();
+    const [y2, nullifier2] = NRLN.calculateOutput(identitySecret, bigintConversion.hexToBigint(epoch.slice(2)), x2, limit);
+
+    const f0 = NRLN.retrievePrivateKey([x1, x2], [y1, y2]);
+    console.log('NRLN Secret retrieval: ', Fq.eq(f0, secret));
+
 }
 
 async function testRlnSlopeCalculation() {
@@ -479,6 +539,8 @@ async function testFairDistributionCircuits() {
     // await testFieldArithmetic();
     // await testRlnSlashingSimulation();
     // await testFairDistributionCircuits();
-    await lagrangeOverFq();
+    // await testGeneralizedRLN();
+    await testGeneralizedRLNSlashing();
+    // await lagrangeOverFq();
     process.exit(0);
 })();
