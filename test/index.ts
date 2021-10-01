@@ -349,6 +349,47 @@ async function testFieldArithmetic() {
     console.log(Fq.eq(n, retrievedN));
 }
 
+async function lagrangeOverFq() {
+
+    const numOfPoints: number = 2;
+
+    // for(let i = 0; i < n; i++) {
+    //     xs[i] = Fq.random();
+    //     ys[i] = Fq.random();
+    // }
+
+    const xs: Array<bigint> = [];
+    const ys: Array<bigint> = [];
+
+    const k = Fq.random();
+    const n = Fq.random();
+
+    const x1 = Fq.random();
+    const y1 = Fq.add(Fq.mul(k, x1), n);
+
+    const x2 = Fq.random();
+    const y2 = Fq.add(Fq.mul(k, x2), n);
+
+    xs.push(x1);
+    xs.push(x2);
+
+    ys.push(y1);
+    ys.push(y2);
+
+    let f0: bigint = BigInt(0);
+    for(let i = 0; i < numOfPoints; i++) {
+        let p: bigint = BigInt(1);
+        for(let j = 0; j < numOfPoints; j++) {
+            if(j !== i) {
+                p = Fq.mul(p, Fq.div(xs[j], Fq.sub(xs[j], xs[i])))
+            }
+        }
+        f0 = Fq.add(f0, Fq.mul(ys[i], p));
+    } 
+
+    console.log('Lagrange:', Fq.eq(f0, n));
+}
+
 async function testFairDistributionCircuits() {
     RLN.setHasher('poseidon');
     const identity = RLN.genIdentity();
@@ -437,6 +478,7 @@ async function testFairDistributionCircuits() {
     // await testRlnSlopeCalculation();
     // await testFieldArithmetic();
     // await testRlnSlashingSimulation();
-    await testFairDistributionCircuits();
+    // await testFairDistributionCircuits();
+    await lagrangeOverFq();
     process.exit(0);
 })();
