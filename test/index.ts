@@ -530,17 +530,17 @@ async function testFairDistributionCircuits() {
 
 
 (async () => {
-    // await testFastSemaphore();
-    // await testOrdinarySemaphore();
-    // await testOxSemaphore();
-    // await testOxContractState();
-    // await testRLN();
-    // await testRlnSlopeCalculation();
-    // await testFieldArithmetic();
-    // await testRlnSlashingSimulation();
-    // await testFairDistributionCircuits();
-    // await testGeneralizedRLN();
+    await testFastSemaphore();
+    await testOrdinarySemaphore();
+    await testOxSemaphore();
+    await testOxContractState();
+    await testRLN();
+    await testRlnSlopeCalculation();
+    await testFieldArithmetic();
+    await testRlnSlashingSimulation();
+    await testFairDistributionCircuits();
+    await testGeneralizedRLN();
     await testGeneralizedRLNSlashing();
-    // await lagrangeOverFq();
+    await lagrangeOverFq();
     process.exit(0);
 })();
