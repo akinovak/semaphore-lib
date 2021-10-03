@@ -41,8 +41,11 @@ async function testFastSemaphore() {
     const finalZkeyPath: string = path.join('./fast-zkeyFiles', 'semaphore_final.zkey');
 
     const witnessData: IWitnessData = await FastSemaphore.genProofFromIdentityCommitments(identity, externalNullifier, signal, wasmFilePath, finalZkeyPath, 
-        idCommitments, 20, ZERO_VALUE, 5);
-    const pubSignals = [witnessData.root, nullifierHash, FastSemaphore.genSignalHash(signal), externalNullifier];
+        idCommitments, 20, ZERO_VALUE, 5, false);
+    const pubSignals = [witnessData.root, nullifierHash, bigintConversion.hexToBigint(signal.slice(2)), externalNullifier];
+
+    console.log(pubSignals);
+    console.log(witnessData.fullProof.publicSignals)
 
     const res = await FastSemaphore.verifyProof(vKey, { proof: witnessData.fullProof.proof, publicSignals: pubSignals });
     if (res === true) {
@@ -531,16 +534,16 @@ async function testFairDistributionCircuits() {
 
 (async () => {
     await testFastSemaphore();
-    await testOrdinarySemaphore();
-    await testOxSemaphore();
-    await testOxContractState();
-    await testRLN();
-    await testRlnSlopeCalculation();
-    await testFieldArithmetic();
-    await testRlnSlashingSimulation();
-    await testFairDistributionCircuits();
-    await testGeneralizedRLN();
-    await testGeneralizedRLNSlashing();
-    await lagrangeOverFq();
+    // await testOrdinarySemaphore();
+    // await testOxSemaphore();
+    // await testOxContractState();
+    // await testRLN();
+    // await testRlnSlopeCalculation();
+    // await testFieldArithmetic();
+    // await testRlnSlashingSimulation();
+    // await testFairDistributionCircuits();
+    // await testGeneralizedRLN();
+    // await testGeneralizedRLNSlashing();
+    // await lagrangeOverFq();
     process.exit(0);
 })();
