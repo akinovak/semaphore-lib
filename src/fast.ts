@@ -43,7 +43,7 @@ class FastSemaphore extends BaseSemaphore {
 
     //sometimes identityCommitments array can be to big so we must generate it on server and just use it on frontend
     async genProofFromBuiltTree(identity: Identity, merkleProof: any, externalNullifier: string | bigint, signal: string, 
-        wasmFilePath: string, finalZkeyPath: string, shouldHash: boolean): Promise<IProof> {
+        wasmFilePath: string, finalZkeyPath: string, shouldHash: boolean = true): Promise<IProof> {
 
         const grothInput: any = {
             identity_nullifier: identity.identityNullifier,
