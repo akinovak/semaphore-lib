@@ -5,10 +5,17 @@ import { Identity, IncrementalQuinTree, IProof, IWitnessData } from './types';
 const Tree = require('incrementalquintree/build/IncrementalQuinTree');
 
 class FastSemaphore extends BaseSemaphore {
+
+    genSecret(identity: Identity): bigint {
+        if(!this.commitmentHasher) throw new Error('Hasher not set');
+        const secret = [identity.identityNullifier, identity.identityTrapdoor];
+        return this.commitmentHasher(secret);
+    }
+
     genIdentityCommitment(identity: Identity): bigint {
         if(!this.commitmentHasher) throw new Error('Hasher not set');
-        const data = [identity.identityNullifier, identity.identityTrapdoor];
-        return this.commitmentHasher(data);
+        const secret = [this.genSecret(identity)];
+        return this.commitmentHasher(secret);
     }
 
     async genProofFromIdentityCommitments(identity: Identity, 
