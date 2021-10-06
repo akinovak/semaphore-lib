@@ -60,13 +60,20 @@ var FastSemaphore = /** @class */ (function (_super) {
     function FastSemaphore() {
         return _super !== null && _super.apply(this, arguments) || this;
     }
+    FastSemaphore.prototype.genSecret = function (identity) {
+        if (!this.commitmentHasher)
+            throw new Error('Hasher not set');
+        var secret = [identity.identityNullifier, identity.identityTrapdoor];
+        return this.commitmentHasher(secret);
+    };
     FastSemaphore.prototype.genIdentityCommitment = function (identity) {
         if (!this.commitmentHasher)
             throw new Error('Hasher not set');
-        var data = [identity.identityNullifier, identity.identityTrapdoor];
-        return this.commitmentHasher(data);
+        var secret = [this.genSecret(identity)];
+        return this.commitmentHasher(secret);
     };
-    FastSemaphore.prototype.genProofFromIdentityCommitments = function (identity, externalNullifier, signal, wasmFilePath, finalZkeyPath, identityCommitments, depth, zeroValue, leavesPerNode) {
+    FastSemaphore.prototype.genProofFromIdentityCommitments = function (identity, externalNullifier, signal, wasmFilePath, finalZkeyPath, identityCommitments, depth, zeroValue, leavesPerNode, shouldHash) {
+        if (shouldHash === void 0) { shouldHash = true; }
         return __awaiter(this, void 0, void 0, function () {
             var tree, identityCommitment, leafIndex, _i, identityCommitments_1, identityCommitment_1, merkleProof, fullProof;
             return __generator(this, function (_a) {
@@ -82,7 +89,7 @@ var FastSemaphore = /** @class */ (function (_super) {
                             tree.insert(identityCommitment_1);
                         }
                         merkleProof = tree.genMerklePath(leafIndex);
-                        return [4 /*yield*/, this.genProofFromBuiltTree(identity, merkleProof, externalNullifier, signal, wasmFilePath, finalZkeyPath)];
+                        return [4 /*yield*/, this.genProofFromBuiltTree(identity, merkleProof, externalNullifier, signal, wasmFilePath, finalZkeyPath, shouldHash)];
                     case 1:
                         fullProof = _a.sent();
                         return [2 /*return*/, {
@@ -94,7 +101,8 @@ var FastSemaphore = /** @class */ (function (_super) {
         });
     };
     //sometimes identityCommitments array can be to big so we must generate it on server and just use it on frontend
-    FastSemaphore.prototype.genProofFromBuiltTree = function (identity, merkleProof, externalNullifier, signal, wasmFilePath, finalZkeyPath) {
+    FastSemaphore.prototype.genProofFromBuiltTree = function (identity, merkleProof, externalNullifier, signal, wasmFilePath, finalZkeyPath, shouldHash) {
+        if (shouldHash === void 0) { shouldHash = true; }
         return __awaiter(this, void 0, void 0, function () {
             var grothInput;
             return __generator(this, function (_a) {
@@ -104,7 +112,7 @@ var FastSemaphore = /** @class */ (function (_super) {
                     identity_path_index: merkleProof.indices,
                     path_elements: merkleProof.pathElements,
                     external_nullifier: externalNullifier,
-                    signal_hash: this.genSignalHash(signal),
+                    signal_hash: shouldHash ? this.genSignalHash(signal) : signal,
                 };
                 return [2 /*return*/, groth16.fullProve(grothInput, wasmFilePath, finalZkeyPath)];
             });
