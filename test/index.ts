@@ -228,7 +228,7 @@ async function testRLN() {
 
 async function testGeneralizedRLN() {
     NRLN.setHasher('poseidon');
-    const limit = 1;
+    const limit = 2;
     const identitySecret: Array<bigint> = NRLN.genIdentitySecrets(limit);
 
     const leafIndex = 3;
@@ -259,6 +259,9 @@ async function testGeneralizedRLN() {
     const [y, nullifier] = NRLN.calculateOutput(identitySecret, bigintConversion.hexToBigint(epoch.slice(2)), signalHash, limit);
     const pubSignals = [y, witnessData.root, nullifier, signalHash, epoch];
 
+    console.log(witnessData.fullProof.publicSignals)
+    console.log(pubSignals)
+
     const res = await RLN.verifyProof(vKey, { proof: witnessData.fullProof.proof, publicSignals: pubSignals })
     if (res === true) {
         console.log("Verification OK");
@@ -269,7 +272,7 @@ async function testGeneralizedRLN() {
 
 async function testGeneralizedRLNSlashing() {
     NRLN.setHasher('poseidon');
-    const limit = 1;
+    const limit = 4;
     const identitySecret: Array<bigint> = NRLN.genIdentitySecrets(limit);
     const secret = poseidonHash(identitySecret);
     const epoch: string = NRLN.genExternalNullifier('test-slashing');
@@ -281,7 +284,16 @@ async function testGeneralizedRLNSlashing() {
     const x2 = Fq.random();
     const [y2, nullifier2] = NRLN.calculateOutput(identitySecret, bigintConversion.hexToBigint(epoch.slice(2)), x2, limit);
 
-    const f0 = NRLN.retrievePrivateKey([x1, x2], [y1, y2]);
+    const x3 = Fq.random();
+    const [y3, nullifier3] = NRLN.calculateOutput(identitySecret, bigintConversion.hexToBigint(epoch.slice(2)), x3, limit);
+
+    const x4 = Fq.random();
+    const [y4, nullifier4] = NRLN.calculateOutput(identitySecret, bigintConversion.hexToBigint(epoch.slice(2)), x4, limit);
+
+    const x5 = Fq.random();
+    const [y5, nullifier5] = NRLN.calculateOutput(identitySecret, bigintConversion.hexToBigint(epoch.slice(2)), x5, limit);
+
+    const f0 = NRLN.retrievePrivateKey([x1, x2, x3, x4, x5], [y1, y2, y3, y4, y5]);
     console.log('NRLN Secret retrieval: ', Fq.eq(f0, secret));
 
 }
@@ -450,6 +462,43 @@ async function lagrangeOverFq() {
     console.log('Lagrange:', Fq.eq(f0, n));
 }
 
+async function polynomialsFq() {
+    const degree: number = 4;
+
+    const coeffs: Array<bigint> = [BigInt(7), BigInt(6), BigInt(9), BigInt(1), BigInt(7)];
+    const xs: Array<bigint> = [];
+
+    for(let i=0;i<degree;i++) {
+        xs.push(BigInt(i))
+    }
+
+    let ys: Array<bigint> = [];
+    for (let i=0;i<degree;i++) {
+        const x: bigint = xs[i];
+        let tmpX: bigint = x;
+        let y: bigint = coeffs[0];
+        for(let j=1;j<degree + 1;j++) {
+            y = Fq.add(y, Fq.mul(tmpX, coeffs[j]))
+            tmpX = Fq.mul(tmpX, x);
+        }
+        ys.push(y)
+    }
+
+    let f0: bigint = BigInt(0);
+    for(let i = 0; i < degree; i++) {
+        let p: bigint = BigInt(1);
+        for(let j = 0; j < degree; j++) {
+            if(j !== i) {
+                p = Fq.mul(p, Fq.div(xs[j], Fq.sub(xs[j], xs[i])))
+            }
+        }
+        f0 = Fq.add(f0, Fq.mul(ys[i], p));
+    } 
+
+    console.log('Lagrange:', Fq.eq(f0, coeffs[0]));
+
+}
+
 async function testFairDistributionCircuits() {
     RLN.setHasher('poseidon');
     const identity = RLN.genIdentity();
@@ -530,17 +579,18 @@ async function testFairDistributionCircuits() {
 
 
 (async () => {
-    await testFastSemaphore();
-    await testOrdinarySemaphore();
-    await testOxSemaphore();
-    await testOxContractState();
-    await testRLN();
-    await testRlnSlopeCalculation();
-    await testFieldArithmetic();
-    await testRlnSlashingSimulation();
-    await testFairDistributionCircuits();
+    // await testFastSemaphore();
+    // await testOrdinarySemaphore();
+    // await testOxSemaphore();
+    // await testOxContractState();
+    // await testRLN();
+    // await testRlnSlopeCalculation();
+    // await testFieldArithmetic();
+    // await testRlnSlashingSimulation();
+    // await testFairDistributionCircuits();
     await testGeneralizedRLN();
-    await testGeneralizedRLNSlashing();
-    await lagrangeOverFq();
+    // await testGeneralizedRLNSlashing();
+    // await lagrangeOverFq();
+    // await polynomialsFq();
     process.exit(0);
 })();
