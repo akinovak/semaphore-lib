@@ -18,7 +18,7 @@ class NRLN extends BaseSemaphore {
         return this.commitmentHasher([this.commitmentHasher(identitySecret)]);
     }
 
-    calculateOutput(identitySecret: Array<bigint>, epoch: bigint, x:bigint, limit: number): Array<bigint> {
+    calculateOutput(identitySecret: Array<bigint>, epoch: bigint, x:bigint, limit: number, rlnIdentifier: bigint): Array<bigint> {
         if(!this.commitmentHasher) throw new Error('Hasher not set');
         if(!identitySecret.length) throw new Error('Secret empty');
 
@@ -38,12 +38,15 @@ class NRLN extends BaseSemaphore {
             y = Fq.add(y, Fq.mul(coeffs[i], tmpX));
         }
 
-        const nullifier: bigint = this.calculateNullifier(coeffs);
+        console.log("calculating nullifier...", rlnIdentifier);
+        const nullifier: bigint = this.calculateNullifier(coeffs, rlnIdentifier);
         return [y, nullifier];
     }
 
-    calculateNullifier(coeffs: Array<bigint>): bigint {
+    calculateNullifier(coeffs: Array<bigint>, rlnIdentifier: bigint): bigint {
+        coeffs.push(poseidonHash([rlnIdentifier]));
         return poseidonHash(coeffs);
+        
     }
 
     retrievePrivateKey(xs: Array<bigint>, ys: Array<bigint>): bigint {
@@ -70,7 +73,9 @@ class NRLN extends BaseSemaphore {
         finalZkeyPath: string, 
         identityCommitments: Array<BigInt>, 
         depth: number, zeroValue: BigInt, 
-        leavesPerNode: number, ): Promise<IWitnessData> {
+        leavesPerNode: number, 
+        rlnIdentifier: bigint
+        ): Promise<IWitnessData> {
 
         const tree: IncrementalQuinTree = new Tree.IncrementalQuinTree(depth, zeroValue, leavesPerNode, poseidonHash);
         const identityCommitment: BigInt = this.genIdentityCommitment(identitySecret);
@@ -82,8 +87,8 @@ class NRLN extends BaseSemaphore {
         }
 
         const merkleProof = tree.genMerklePath(leafIndex);
-        
-        const fullProof: IProof = await this.genProofFromBuiltTree(identitySecret, merkleProof, epoch, signal, wasmFilePath, finalZkeyPath);
+            console.log("rln identifier", rlnIdentifier);
+        const fullProof: IProof = await this.genProofFromBuiltTree(identitySecret, merkleProof, epoch, signal, rlnIdentifier, wasmFilePath, finalZkeyPath);
         return {
             fullProof, 
             root: tree.root
@@ -91,7 +96,7 @@ class NRLN extends BaseSemaphore {
     }
 
     //sometimes identityCommitments array can be to big so we must generate it on server and just use it on frontend
-    async genProofFromBuiltTree(identitySecret: Array<bigint>, merkleProof: any, epoch: string | bigint, signal: string,
+    async genProofFromBuiltTree(identitySecret: Array<bigint>, merkleProof: any, epoch: string | bigint, signal: string, rlnIdentifier: bigint,
         wasmFilePath: string, finalZkeyPath: string): Promise<IProof> {
 
             const grothInput: any = {
@@ -100,6 +105,7 @@ class NRLN extends BaseSemaphore {
                 identity_path_index: merkleProof.indices,
                 epoch,
                 x: this.genSignalHash(signal),
+                rln_identifier: rlnIdentifier
             }
 
         return groth16.fullProve(grothInput, wasmFilePath, finalZkeyPath);

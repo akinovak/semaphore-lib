@@ -228,7 +228,7 @@ async function testRLN() {
 
 async function testGeneralizedRLN() {
     NRLN.setHasher('poseidon');
-    const limit = 2;
+    const limit = 3;
     const identitySecret: Array<bigint> = NRLN.genIdentitySecrets(limit);
 
     const leafIndex = 3;
@@ -246,7 +246,7 @@ async function testGeneralizedRLN() {
     const signalHash: bigint = NRLN.genSignalHash(signal);
     const epoch: string = NRLN.genExternalNullifier('test-epoch');
 
-    // const rlnIdentifier: bigint = RLN.genIdentifier();
+    const rlnIdentifier: bigint = RLN.genIdentifier();
 
     const vkeyPath: string = path.join('./g-rln-zkeyFiles', 'verification_key.json');
     const vKey = JSON.parse(fs.readFileSync(vkeyPath, 'utf-8'));
@@ -254,13 +254,10 @@ async function testGeneralizedRLN() {
     const wasmFilePath: string = path.join('./g-rln-zkeyFiles', 'rln.wasm');
     const finalZkeyPath: string = path.join('./g-rln-zkeyFiles', 'rln_final.zkey');
 
-    const witnessData: IWitnessData = await NRLN.genProofFromIdentityCommitments(identitySecret, epoch, signal, wasmFilePath, finalZkeyPath, idCommitments, 15, BigInt(0), 2);
+    const witnessData: IWitnessData = await NRLN.genProofFromIdentityCommitments(identitySecret, epoch, signal, wasmFilePath, finalZkeyPath, idCommitments, 15, BigInt(0), 2, rlnIdentifier);
 
-    const [y, nullifier] = NRLN.calculateOutput(identitySecret, bigintConversion.hexToBigint(epoch.slice(2)), signalHash, limit);
-    const pubSignals = [y, witnessData.root, nullifier, signalHash, epoch];
-
-    console.log(witnessData.fullProof.publicSignals)
-    console.log(pubSignals)
+    const [y, nullifier] = NRLN.calculateOutput(identitySecret, bigintConversion.hexToBigint(epoch.slice(2)), signalHash, limit, rlnIdentifier);
+    const pubSignals = [y, witnessData.root, nullifier, signalHash, epoch, rlnIdentifier];
 
     const res = await RLN.verifyProof(vKey, { proof: witnessData.fullProof.proof, publicSignals: pubSignals })
     if (res === true) {
@@ -272,28 +269,29 @@ async function testGeneralizedRLN() {
 
 async function testGeneralizedRLNSlashing() {
     NRLN.setHasher('poseidon');
-    const limit = 4;
+    const limit = 3;
     const identitySecret: Array<bigint> = NRLN.genIdentitySecrets(limit);
     const secret = poseidonHash(identitySecret);
     const epoch: string = NRLN.genExternalNullifier('test-slashing');
 
+    const rlnIdentifier: bigint = RLN.genIdentifier();
+
 
     const x1 = Fq.random();
-    const [y1, nullifier1] = NRLN.calculateOutput(identitySecret, bigintConversion.hexToBigint(epoch.slice(2)), x1, limit);
+    const [y1, nullifier1] = NRLN.calculateOutput(identitySecret, bigintConversion.hexToBigint(epoch.slice(2)), x1, limit, rlnIdentifier);
 
     const x2 = Fq.random();
-    const [y2, nullifier2] = NRLN.calculateOutput(identitySecret, bigintConversion.hexToBigint(epoch.slice(2)), x2, limit);
+    const [y2, nullifier2] = NRLN.calculateOutput(identitySecret, bigintConversion.hexToBigint(epoch.slice(2)), x2, limit, rlnIdentifier);
 
     const x3 = Fq.random();
-    const [y3, nullifier3] = NRLN.calculateOutput(identitySecret, bigintConversion.hexToBigint(epoch.slice(2)), x3, limit);
+    const [y3, nullifier3] = NRLN.calculateOutput(identitySecret, bigintConversion.hexToBigint(epoch.slice(2)), x3, limit, rlnIdentifier);
+
 
     const x4 = Fq.random();
-    const [y4, nullifier4] = NRLN.calculateOutput(identitySecret, bigintConversion.hexToBigint(epoch.slice(2)), x4, limit);
+    const [y4, nullifier4] = NRLN.calculateOutput(identitySecret, bigintConversion.hexToBigint(epoch.slice(2)), x4, limit, rlnIdentifier);
 
-    const x5 = Fq.random();
-    const [y5, nullifier5] = NRLN.calculateOutput(identitySecret, bigintConversion.hexToBigint(epoch.slice(2)), x5, limit);
 
-    const f0 = NRLN.retrievePrivateKey([x1, x2, x3, x4, x5], [y1, y2, y3, y4, y5]);
+    const f0 = NRLN.retrievePrivateKey([x1, x2, x3, x4], [y1, y2, y3, y4]);
     console.log('NRLN Secret retrieval: ', Fq.eq(f0, secret));
 
 }
@@ -579,18 +577,18 @@ async function testFairDistributionCircuits() {
 
 
 (async () => {
-    // await testFastSemaphore();
-    // await testOrdinarySemaphore();
-    // await testOxSemaphore();
-    // await testOxContractState();
-    // await testRLN();
-    // await testRlnSlopeCalculation();
-    // await testFieldArithmetic();
-    // await testRlnSlashingSimulation();
-    // await testFairDistributionCircuits();
+    await testFastSemaphore();
+    await testOrdinarySemaphore();
+    await testOxSemaphore();
+    await testOxContractState();
+    await testRLN();
+    await testRlnSlopeCalculation();
+    await testFieldArithmetic();
+    await testRlnSlashingSimulation();
+    await testFairDistributionCircuits();
     await testGeneralizedRLN();
-    // await testGeneralizedRLNSlashing();
-    // await lagrangeOverFq();
-    // await polynomialsFq();
+    await testGeneralizedRLNSlashing();
+    await lagrangeOverFq();
+    await polynomialsFq();
     process.exit(0);
 })();
