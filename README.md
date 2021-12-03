@@ -1,2 +1,3 @@
-# semaphore-lib
- This repository contains the code necessary for third-party developers to easily integrate with new version of Semaphore
+This repository is deprecated and not maintained anymore.
+
+Please check https://github.com/appliedzkp/libsemaphore
